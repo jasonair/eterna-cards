@@ -100,7 +100,7 @@ export default function ViewDataPage() {
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return `${currency} ${amount.toFixed(2)}`;
+    return `£${amount.toFixed(2)} GBP`;
   };
 
   const groupPOsByMonth = () => {
@@ -585,7 +585,7 @@ export default function ViewDataPage() {
                           <p className="text-2xl font-bold text-white">
                             {formatCurrency(totalAmount, po.currency)}
                           </p>
-                          <p className="text-blue-100 text-sm">ex VAT</p>
+                          <p className="text-blue-100 text-sm">ex VAT (GBP)</p>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -943,7 +943,7 @@ export default function ViewDataPage() {
                             />
                           </td>
                           <td className="px-3 py-3 text-sm font-medium text-gray-900">
-                            {editFormData.currency} {(line.lineTotalExVAT || 0).toFixed(2)}
+                            £{(line.lineTotalExVAT || 0).toFixed(2)} GBP
                           </td>
                           <td className="px-3 py-3">
                             <button

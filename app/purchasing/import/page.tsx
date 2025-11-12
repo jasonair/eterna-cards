@@ -69,27 +69,11 @@ export default function ImportPage() {
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
   const [editedData, setEditedData] = useState<{ [key: number]: ExtractedData }>({});
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
-  const [previewFile, setPreviewFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dismissedDuplicates, setDismissedDuplicates] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const navigateToView = () => {
     router.push('/purchasing/view');
-  };
-
-  const handleFilePreview = (file: File) => {
-    setPreviewFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-  };
-
-  const closePreview = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setPreviewFile(null);
-    setPreviewUrl(null);
   };
 
   const createNewGroup = (files: File[]) => {
@@ -366,8 +350,8 @@ export default function ImportPage() {
   const analyzeGroup = async (groupIndex: number, group: FileGroup) => {
     // Update status to processing
     setGroupResults(prev =>
-      prev.map((result, idx) =>
-        idx === groupIndex ? { ...result, status: 'processing' as const } : result
+      prev.map((result) =>
+        result.group.id === group.id ? { ...result, status: 'processing' as const } : result
       )
     );
 
@@ -394,8 +378,8 @@ export default function ImportPage() {
 
       // Update with extracted data
       setGroupResults(prev =>
-        prev.map((result, idx) =>
-          idx === groupIndex
+        prev.map((result) =>
+          result.group.id === group.id
             ? {
                 ...result,
                 status: 'extracted' as const,
@@ -425,8 +409,8 @@ export default function ImportPage() {
           const duplicateData = await duplicateResponse.json();
           if (duplicateData.hasDuplicates) {
             setGroupResults(prev =>
-              prev.map((result, idx) =>
-                idx === groupIndex
+              prev.map((result) =>
+                result.group.id === group.id
                   ? {
                       ...result,
                       duplicates: duplicateData.duplicates,
@@ -437,8 +421,8 @@ export default function ImportPage() {
             );
           } else {
             setGroupResults(prev =>
-              prev.map((result, idx) =>
-                idx === groupIndex ? { ...result, duplicatesChecked: true } : result
+              prev.map((result) =>
+                result.group.id === group.id ? { ...result, duplicatesChecked: true } : result
               )
             );
           }
@@ -447,16 +431,16 @@ export default function ImportPage() {
         console.error('Error checking duplicates:', duplicateError);
         // Continue without duplicate checking
         setGroupResults(prev =>
-          prev.map((result, idx) =>
-            idx === groupIndex ? { ...result, duplicatesChecked: true } : result
+          prev.map((result) =>
+            result.group.id === group.id ? { ...result, duplicatesChecked: true } : result
           )
         );
       }
     } catch (err) {
       // Update with error
       setGroupResults(prev =>
-        prev.map((result, idx) =>
-          idx === groupIndex
+        prev.map((result) =>
+          result.group.id === group.id
             ? {
                 ...result,
                 status: 'error' as const,
@@ -695,15 +679,12 @@ export default function ImportPage() {
                               !loading ? 'cursor-move hover:bg-gray-100' : ''
                             }`}
                           >
-                            <button
-                              onClick={() => handleFilePreview(file)}
-                              className="flex items-center gap-2 min-w-0 flex-1 text-left hover:text-blue-600 transition-colors"
-                            >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
-                              <span className="text-xs text-gray-700 truncate hover:text-blue-600">{file.name}</span>
-                            </button>
+                              <span className="text-xs text-gray-700 truncate">{file.name}</span>
+                            </div>
                             {!loading && (
                               <button
                                 type="button"
@@ -1102,7 +1083,7 @@ export default function ImportPage() {
                       <h4 className="text-sm font-semibold text-gray-900 mb-3">Totals</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">Subtotal (ex VAT)</label>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Subtotal (ex VAT) - GBP</label>
                           <input
                             type="number"
                             step="0.01"
@@ -1112,7 +1093,7 @@ export default function ImportPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">Extras (Shipping, etc.)</label>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Extras (Shipping, etc.) - GBP</label>
                           <input
                             type="number"
                             step="0.01"
@@ -1122,7 +1103,7 @@ export default function ImportPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">VAT</label>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">VAT - GBP</label>
                           <input
                             type="number"
                             step="0.01"
@@ -1132,7 +1113,7 @@ export default function ImportPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">Total</label>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Total - GBP</label>
                           <input
                             type="number"
                             step="0.01"
@@ -1167,55 +1148,6 @@ export default function ImportPage() {
               </div>
               );
             })}
-          </div>
-        )}
-
-        {/* File Preview Modal */}
-        {previewFile && previewUrl && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-            onClick={closePreview}
-          >
-            <div 
-              className="relative max-w-7xl max-h-full bg-white rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 truncate max-w-md">
-                  {previewFile.name}
-                </h3>
-                <button
-                  onClick={closePreview}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
-                >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-4 overflow-auto max-h-[80vh]">
-                {previewFile.type.startsWith('image/') ? (
-                  <img 
-                    src={previewUrl} 
-                    alt={previewFile.name}
-                    className="max-w-full h-auto rounded"
-                  />
-                ) : previewFile.type === 'application/pdf' ? (
-                  <iframe
-                    src={previewUrl}
-                    className="w-full h-[70vh] rounded"
-                    title={previewFile.name}
-                  />
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">Preview not available for this file type</p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
       </div>

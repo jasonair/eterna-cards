@@ -426,9 +426,9 @@ export default function CreatePOPage() {
             {/* Total */}
             <div className="mt-4 flex justify-end">
               <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                <div className="text-sm text-gray-600">Total (ex VAT)</div>
+                <div className="text-sm text-gray-600">Total (ex VAT) - GBP</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  {currency} {totalAmount.toFixed(2)}
+                  £{totalAmount.toFixed(2)}
                 </div>
               </div>
             </div>
