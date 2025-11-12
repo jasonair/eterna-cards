@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   findOrCreateSupplier,
   createPurchaseOrder,
@@ -25,7 +24,7 @@ Input: an invoice (PDF text). Output: a single valid JSON object in this schema:
   "purchaseOrder": {
     "invoiceNumber": "string",
     "invoiceDate": "YYYY-MM-DD | null",
-    "currency": "ISO code (GBP, EUR, USD, etc.)",
+    "originalCurrency": "ISO code (GBP, EUR, USD, etc.) - the currency shown on the invoice",
     "paymentTerms": "string | null"
   },
   "poLines": [
@@ -47,6 +46,9 @@ Input: an invoice (PDF text). Output: a single valid JSON object in this schema:
 Rules:
 - Return valid JSON only, no commentary.
 - Convert all prices to numeric values.
+- **CRITICAL: If the invoice is NOT in GBP, you MUST convert ALL monetary values (unitCostExVAT, lineTotalExVAT, subTotalExVAT, vatTotal, grandTotal) to GBP using current exchange rates.**
+- Store the original currency in "originalCurrency" field.
+- After conversion, all prices should be in GBP.
 - If a field is missing, return null.
 - Merge lines across multiple pages.
 
@@ -65,7 +67,7 @@ interface ExtractedData {
   purchaseOrder: {
     invoiceNumber: string;
     invoiceDate: string | null;
-    currency: string;
+    originalCurrency: string;
     paymentTerms: string | null;
   };
   poLines: Array<{
@@ -122,11 +124,7 @@ export async function POST(request: NextRequest) {
       mimeType = 'application/pdf';
     }
 
-    // 4. Send to Gemini API for structured extraction
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Use Gemini 2.0 Flash for multimodal support
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    
+    // 4. Send to Gemini API v1 endpoint directly (bypass SDK)
     const filePart = {
       inlineData: {
         data: base64Data,
@@ -136,9 +134,39 @@ export async function POST(request: NextRequest) {
 
     const prompt = EXTRACTION_PROMPT + `\n\nPlease analyze this invoice ${isPDF ? 'PDF' : 'image'} and extract the data.`;
     
-    let result;
+    const requestBody = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          filePart
+        ]
+      }]
+    };
+
+    let text;
     try {
-      result = await model.generateContent([prompt, filePart]);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error:', errorText);
+        return NextResponse.json(
+          { error: `Gemini API error: ${response.status} ${response.statusText}`, details: errorText },
+          { status: 500 }
+        );
+      }
+
+      const data = await response.json();
+      text = data.candidates[0].content.parts[0].text;
     } catch (error) {
       console.error('Gemini API error:', error);
       return NextResponse.json(
@@ -146,9 +174,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const response = result.response;
-    const text = response.text();
 
     // 5. Parse JSON response from Gemini
     let extractedData: ExtractedData;
@@ -190,12 +215,12 @@ export async function POST(request: NextRequest) {
         vatNumber: extractedData.supplier.vatNumber,
       });
 
-      // Create purchase order
+      // Create purchase order (always store as GBP since AI converts)
       const purchaseOrderId = await createPurchaseOrder({
         supplierId,
         invoiceNumber: extractedData.purchaseOrder.invoiceNumber,
         invoiceDate: extractedData.purchaseOrder.invoiceDate,
-        currency: extractedData.purchaseOrder.currency,
+        currency: 'GBP', // All prices are converted to GBP by AI
         paymentTerms: extractedData.purchaseOrder.paymentTerms,
       });
 
@@ -218,10 +243,14 @@ export async function POST(request: NextRequest) {
           supplierId,
           purchaseOrderId,
           supplier: extractedData.supplier,
-          purchaseOrder: extractedData.purchaseOrder,
+          purchaseOrder: {
+            ...extractedData.purchaseOrder,
+            currency: 'GBP', // Confirm all values are in GBP
+          },
           poLines: extractedData.poLines,
           totals: extractedData.totals,
           savedLines: poLines.length,
+          originalCurrency: extractedData.purchaseOrder.originalCurrency,
         },
       });
     } catch (error) {

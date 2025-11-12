@@ -18,7 +18,7 @@ export interface Supplier {
 export interface PurchaseOrder {
   id: string;
   supplierId: string;
-  invoiceNumber: string;
+  invoiceNumber: string | null;
   invoiceDate: string | null;
   currency: string;
   paymentTerms: string | null;
@@ -246,4 +246,105 @@ export async function deleteSupplier(supplierId: string): Promise<{
     deletedPurchaseOrders: supplierPOs.length,
     deletedLines,
   };
+}
+
+// Interface for duplicate detection result
+export interface DuplicateMatch {
+  purchaseOrder: PurchaseOrder;
+  supplier: Supplier;
+  matchScore: number;
+  matchReasons: string[];
+  lineCount: number;
+}
+
+// Helper function to detect duplicate purchase orders
+export async function findDuplicatePurchaseOrders(
+  supplierName: string,
+  invoiceNumber: string | null,
+  invoiceDate: string | null,
+  poLines: Array<{ description: string; quantity: number; unitCostExVAT: number }>
+): Promise<DuplicateMatch[]> {
+  const database = await getDb();
+  const duplicates: DuplicateMatch[] = [];
+
+  // Find supplier by name (case-insensitive)
+  const supplier = database.data.suppliers.find(
+    (s) => s.name?.toLowerCase() === supplierName?.toLowerCase()
+  );
+
+  if (!supplier) {
+    // No supplier found, so no duplicates possible
+    return [];
+  }
+
+  // Get all purchase orders for this supplier
+  const supplierPOs = database.data.purchaseOrders.filter(
+    (po) => po.supplierId === supplier.id
+  );
+
+  for (const po of supplierPOs) {
+    const matchReasons: string[] = [];
+    let matchScore = 0;
+
+    // Check invoice number match (strong indicator)
+    if (invoiceNumber && po.invoiceNumber && 
+        invoiceNumber.toLowerCase() === po.invoiceNumber.toLowerCase()) {
+      matchReasons.push('Same invoice number');
+      matchScore += 50;
+    }
+
+    // Check invoice date match
+    if (invoiceDate && po.invoiceDate && invoiceDate === po.invoiceDate) {
+      matchReasons.push('Same invoice date');
+      matchScore += 20;
+    }
+
+    // Get line items for this PO
+    const existingLines = database.data.poLines.filter(
+      (line) => line.purchaseOrderId === po.id
+    );
+
+    // Check if line items are similar
+    if (existingLines.length === poLines.length && poLines.length > 0) {
+      matchReasons.push('Same number of line items');
+      matchScore += 10;
+
+      // Check for matching line items
+      let matchingLines = 0;
+      for (const newLine of poLines) {
+        const similarLine = existingLines.find(
+          (existingLine) =>
+            existingLine.description.toLowerCase().includes(newLine.description.toLowerCase().substring(0, 20)) ||
+            newLine.description.toLowerCase().includes(existingLine.description.toLowerCase().substring(0, 20)) ||
+            (Math.abs(existingLine.unitCostExVAT - newLine.unitCostExVAT) < 0.01 &&
+             existingLine.quantity === newLine.quantity)
+        );
+        if (similarLine) {
+          matchingLines++;
+        }
+      }
+
+      if (matchingLines > 0) {
+        const matchPercentage = (matchingLines / poLines.length) * 100;
+        matchReasons.push(`${matchingLines}/${poLines.length} similar line items`);
+        matchScore += matchPercentage * 0.2; // Up to 20 points for 100% match
+      }
+    }
+
+    // If match score is significant, add to duplicates
+    if (matchScore >= 30) {
+      duplicates.push({
+        purchaseOrder: po,
+        supplier,
+        matchScore,
+        matchReasons,
+        lineCount: existingLines.length,
+      });
+    }
+  }
+
+  // Sort by match score (highest first)
+  duplicates.sort((a, b) => b.matchScore - a.matchScore);
+
+  return duplicates;
 }

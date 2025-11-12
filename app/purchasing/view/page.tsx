@@ -57,11 +57,6 @@ export default function ViewDataPage() {
   const [saving, setSaving] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
-  const [draggedPO, setDraggedPO] = useState<PurchaseOrder | null>(null);
-  const [dragOverPO, setDragOverPO] = useState<string | null>(null);
-  const [showMergeModal, setShowMergeModal] = useState(false);
-  const [mergeTarget, setMergeTarget] = useState<{ source: PurchaseOrder; target: PurchaseOrder } | null>(null);
-  const [merging, setMerging] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -404,66 +399,6 @@ export default function ViewDataPage() {
     }));
   };
 
-  const handleDragStart = (e: React.DragEvent, po: PurchaseOrder) => {
-    setDraggedPO(po);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent, poId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverPO(poId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverPO(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetPO: PurchaseOrder) => {
-    e.preventDefault();
-    setDragOverPO(null);
-
-    if (!draggedPO || draggedPO.id === targetPO.id) {
-      setDraggedPO(null);
-      return;
-    }
-
-    // Show merge confirmation modal
-    setMergeTarget({ source: draggedPO, target: targetPO });
-    setShowMergeModal(true);
-    setDraggedPO(null);
-  };
-
-  const handleMergePOs = async () => {
-    if (!mergeTarget) return;
-
-    setMerging(true);
-    try {
-      const response = await fetch('/api/purchasing/po/merge', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sourcePOId: mergeTarget.source.id,
-          targetPOId: mergeTarget.target.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to merge purchase orders');
-      }
-
-      // Refresh data after successful merge
-      await fetchData();
-      setShowMergeModal(false);
-      setMergeTarget(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to merge purchase orders');
-    } finally {
-      setMerging(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -632,14 +567,7 @@ export default function ViewDataPage() {
                     return (
                       <div 
                         key={po.id} 
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, po)}
-                        onDragOver={(e) => handleDragOver(e, po.id)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, po)}
-                        className={`bg-white rounded-lg shadow overflow-hidden transition-all cursor-move ${
-                          dragOverPO === po.id ? 'ring-4 ring-blue-500 scale-105' : ''
-                        } ${draggedPO?.id === po.id ? 'opacity-50' : ''}`}
+                        className="bg-white rounded-lg shadow overflow-hidden transition-all"
                       >
                   {/* PO Header */}
                   <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
@@ -1147,121 +1075,6 @@ export default function ViewDataPage() {
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Export {selectedMonths.length > 0 && `(${selectedMonths.length} month${selectedMonths.length !== 1 ? 's' : ''})`}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Merge Confirmation Modal */}
-      {showMergeModal && mergeTarget && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border max-w-2xl shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Merge Purchase Orders</h3>
-                <button
-                  onClick={() => {
-                    setShowMergeModal(false);
-                    setMergeTarget(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                  disabled={merging}
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex">
-                    <svg className="h-5 w-5 text-yellow-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div>
-                      <h4 className="text-sm font-medium text-yellow-800">Merge Confirmation</h4>
-                      <p className="text-sm text-yellow-700 mt-1">
-                        This will move all line items from the source PO to the target PO and delete the source PO. This action cannot be undone.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Source PO */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                      <h4 className="font-medium text-gray-900">Source (Will be deleted)</h4>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-gray-600">
-                        <span className="font-medium">Invoice:</span> {mergeTarget.source.invoiceNumber || 'N/A'}
-                      </p>
-                      <p className="text-gray-600">
-                        <span className="font-medium">Supplier:</span> {getSupplierName(mergeTarget.source.supplierId)}
-                      </p>
-                      <p className="text-gray-600">
-                        <span className="font-medium">Lines:</span> {getPOLines(mergeTarget.source.id).length}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Target PO */}
-                  <div className="border border-green-200 bg-green-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <h4 className="font-medium text-gray-900">Target (Will receive items)</h4>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-gray-600">
-                        <span className="font-medium">Invoice:</span> {mergeTarget.target.invoiceNumber || 'N/A'}
-                      </p>
-                      <p className="text-gray-600">
-                        <span className="font-medium">Supplier:</span> {getSupplierName(mergeTarget.target.supplierId)}
-                      </p>
-                      <p className="text-gray-600">
-                        <span className="font-medium">Lines:</span> {getPOLines(mergeTarget.target.id).length} → {getPOLines(mergeTarget.target.id).length + getPOLines(mergeTarget.source.id).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowMergeModal(false);
-                    setMergeTarget(null);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  disabled={merging}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleMergePOs}
-                  disabled={merging}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {merging ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Merging...
-                    </span>
-                  ) : (
-                    'Merge Purchase Orders'
-                  )}
                 </button>
               </div>
             </div>

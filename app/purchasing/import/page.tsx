@@ -3,157 +3,116 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface UploadResponse {
-  success: boolean;
-  data?: {
-    supplierId: string;
-    purchaseOrderId: string;
-    supplier: {
-      name: string;
-      address: string | null;
-      email: string | null;
-      phone: string | null;
-      vatNumber: string | null;
-    };
-    purchaseOrder: {
-      invoiceNumber: string;
-      invoiceDate: string | null;
-      currency: string;
-      paymentTerms: string | null;
-    };
-    poLines: Array<{
-      description: string;
-      supplierSku: string | null;
-      quantity: number;
-      unitCostExVAT: number;
-      lineTotalExVAT: number;
-    }>;
-    totals: {
-      subTotalExVAT: number | null;
-      vatTotal: number | null;
-      grandTotal: number | null;
-    };
-    savedLines: number;
-  };
-  error?: string;
-  rawResponse?: string;
-}
-
-interface FileUploadResult {
-  file: File;
-  status: 'pending' | 'processing' | 'success' | 'error';
-  data?: UploadResponse;
-  error?: string;
-  matchGroup?: number; // Group ID for matched documents
-}
-
-interface MatchedGroup {
-  groupId: number;
+interface FileGroup {
+  id: string;
+  name: string;
   files: File[];
-  results: FileUploadResult[];
-  matchReason: string;
-  confidence: 'high' | 'medium';
+}
+
+interface ExtractedData {
+  supplier: {
+    name?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+    vatNumber?: string;
+  };
+  purchaseOrder: {
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    originalCurrency?: string;
+    paymentTerms?: string;
+  };
+  poLines: Array<{
+    description: string;
+    supplierSku?: string;
+    quantity: number;
+    unitCostExVAT: number;
+    lineTotalExVAT: number;
+  }>;
+  totals: {
+    subtotal?: number;
+    extras?: number;
+    vat?: number;
+    total?: number;
+  };
+}
+
+interface DuplicateMatch {
+  id: string;
+  invoiceNumber: string | null;
+  invoiceDate: string | null;
+  supplierName: string;
+  matchScore: number;
+  matchReasons: string[];
+  lineCount: number;
+  createdAt: string;
+}
+
+interface GroupResult {
+  group: FileGroup;
+  status: 'pending' | 'processing' | 'extracted' | 'approved' | 'success' | 'cancelled' | 'error';
+  extractedData?: ExtractedData;
+  error?: string;
+  duplicates?: DuplicateMatch[];
+  duplicatesChecked?: boolean;
 }
 
 export default function ImportPage() {
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploadResults, setUploadResults] = useState<FileUploadResult[]>([]);
+  const [fileGroups, setFileGroups] = useState<FileGroup[]>([]);
+  const [groupResults, setGroupResults] = useState<GroupResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matchedGroups, setMatchedGroups] = useState<MatchedGroup[]>([]);
-  const [showMatchReview, setShowMatchReview] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [draggedFile, setDraggedFile] = useState<{ groupId: string; fileIndex: number } | null>(null);
+  const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
+  const [editedData, setEditedData] = useState<{ [key: number]: ExtractedData }>({});
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [dismissedDuplicates, setDismissedDuplicates] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const navigateToView = () => {
     router.push('/purchasing/view');
   };
 
-  // Conservative matching logic - only matches if highly confident
-  const findMatchingDocuments = (results: FileUploadResult[]): MatchedGroup[] => {
-    const groups: MatchedGroup[] = [];
-    const processed = new Set<number>();
-    let groupId = 0;
+  const handleFilePreview = (file: File) => {
+    setPreviewFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+  };
 
-    results.forEach((result, index) => {
-      if (processed.has(index) || result.status !== 'success' || !result.data?.success) return;
+  const closePreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewFile(null);
+    setPreviewUrl(null);
+  };
 
-      const matches: number[] = [index];
-      const currentData = result.data.data;
-
-      // Look for matches in remaining results
-      results.forEach((otherResult, otherIndex) => {
-        if (
-          otherIndex <= index ||
-          processed.has(otherIndex) ||
-          otherResult.status !== 'success' ||
-          !otherResult.data?.success
-        ) return;
-
-        const otherData = otherResult.data.data;
-        
-        // CONSERVATIVE MATCHING CRITERIA - ALL must match
-        const sameSupplier = currentData?.supplier.name === otherData?.supplier.name;
-        const sameInvoiceNumber = currentData?.purchaseOrder.invoiceNumber === otherData?.purchaseOrder.invoiceNumber;
-        const sameDate = currentData?.purchaseOrder.invoiceDate === otherData?.purchaseOrder.invoiceDate;
-        const sameCurrency = currentData?.purchaseOrder.currency === otherData?.purchaseOrder.currency;
-        
-        // HIGH CONFIDENCE: Invoice number + supplier + date all match
-        if (sameSupplier && sameInvoiceNumber && sameDate && currentData?.purchaseOrder.invoiceNumber && currentData.purchaseOrder.invoiceNumber.trim() !== '') {
-          matches.push(otherIndex);
-          processed.add(otherIndex);
-        }
-        // MEDIUM CONFIDENCE: Same supplier + same date + same currency (but no invoice number)
-        else if (
-          sameSupplier && 
-          sameDate && 
-          sameCurrency && 
-          (!currentData?.purchaseOrder.invoiceNumber || currentData.purchaseOrder.invoiceNumber.trim() === '') &&
-          (!otherData?.purchaseOrder.invoiceNumber || otherData.purchaseOrder.invoiceNumber.trim() === '')
-        ) {
-          // Only match if uploaded within 1 second of each other (same batch)
-          const timeDiff = Math.abs(index - otherIndex);
-          if (timeDiff <= 5) { // Adjacent or very close in upload order
-            matches.push(otherIndex);
-            processed.add(otherIndex);
-          }
-        }
-      });
-
-      if (matches.length > 1) {
-        processed.add(index);
-        const matchedResults = matches.map(i => results[i]);
-        const firstData = matchedResults[0].data?.data;
-        
-        let matchReason = '';
-        let confidence: 'high' | 'medium' = 'high';
-        
-        if (firstData?.purchaseOrder.invoiceNumber && firstData.purchaseOrder.invoiceNumber.trim() !== '') {
-          matchReason = `Same invoice number (${firstData.purchaseOrder.invoiceNumber}), supplier, and date`;
-          confidence = 'high';
-        } else {
-          matchReason = `Same supplier (${firstData?.supplier.name}), date, and currency - uploaded together`;
-          confidence = 'medium';
-        }
-
-        groups.push({
-          groupId: groupId++,
-          files: matches.map(i => results[i].file),
-          results: matchedResults,
-          matchReason,
-          confidence,
-        });
-      }
-    });
-
-    return groups;
+  const createNewGroup = (files: File[]) => {
+    const newGroup: FileGroup = {
+      id: crypto.randomUUID(),
+      name: `Group ${fileGroups.length + 1}`,
+      files: files,
+    };
+    setFileGroups(prev => [...prev, newGroup]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      setFiles(selectedFiles);
-      setUploadResults([]);
+      // Create individual groups for each file
+      setFileGroups(prev => {
+        const newGroups = selectedFiles.map((file, index) => ({
+          id: crypto.randomUUID(),
+          name: `Group ${prev.length + index + 1}`,
+          files: [file],
+        }));
+        return [...prev, ...newGroups];
+      });
       setError(null);
     }
   };
@@ -184,141 +143,384 @@ export default function ImportPage() {
     });
 
     if (droppedFiles.length > 0) {
-      setFiles(droppedFiles);
-      setUploadResults([]);
+      setFileGroups(prev => {
+        const newGroups = droppedFiles.map((file, index) => ({
+          id: crypto.randomUUID(),
+          name: `Group ${prev.length + index + 1}`,
+          files: [file],
+        }));
+        return [...prev, ...newGroups];
+      });
       setError(null);
     }
   };
 
-  const handleRemoveFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-    setUploadResults(prev => prev.filter((_, i) => i !== index));
+  const handleFileDragStart = (groupId: string, fileIndex: number) => {
+    setDraggedFile({ groupId, fileIndex });
   };
 
-  const handleMergeMatches = async () => {
-    setShowMatchReview(false);
-    
-    // Merge each group
-    for (const group of matchedGroups) {
-      if (group.results.length < 2) continue;
+  const handleGroupDragOver = (e: React.DragEvent, targetGroupId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverGroup(targetGroupId);
+  };
 
-      try {
-        // Use the first PO as the target, merge others into it
-        const targetPOId = group.results[0].data?.data?.purchaseOrderId;
-        
-        for (let i = 1; i < group.results.length; i++) {
-          const sourcePOId = group.results[i].data?.data?.purchaseOrderId;
-          
-          if (targetPOId && sourcePOId) {
-            await fetch('/api/purchasing/po/merge', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                sourcePOId,
-                targetPOId,
-              }),
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error merging matched documents:', err);
-      }
+  const handleGroupDragLeave = () => {
+    setDragOverGroup(null);
+  };
+
+  const handleGroupDrop = (e: React.DragEvent, targetGroupId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverGroup(null);
+
+    if (!draggedFile || draggedFile.groupId === targetGroupId) {
+      setDraggedFile(null);
+      return;
     }
 
-    // Clear state and navigate
-    setMatchedGroups([]);
-    setTimeout(() => navigateToView(), 500);
+    // Move file from source group to target group
+    setFileGroups(prev => {
+      const sourceGroup = prev.find(g => g.id === draggedFile.groupId);
+      const targetGroup = prev.find(g => g.id === targetGroupId);
+
+      if (sourceGroup && targetGroup && sourceGroup.files[draggedFile.fileIndex]) {
+        const movedFile = sourceGroup.files[draggedFile.fileIndex];
+        
+        // Create new groups array with updated files
+        const updatedGroups = prev.map(group => {
+          if (group.id === draggedFile.groupId) {
+            // Remove file from source group
+            return {
+              ...group,
+              files: group.files.filter((_, idx) => idx !== draggedFile.fileIndex),
+            };
+          } else if (group.id === targetGroupId) {
+            // Add file to target group
+            return {
+              ...group,
+              files: [...group.files, movedFile],
+            };
+          }
+          return group;
+        });
+
+        // Remove empty groups
+        return updatedGroups.filter(g => g.files.length > 0);
+      }
+
+      return prev;
+    });
+
+    setDraggedFile(null);
   };
 
-  const handleSkipMerge = () => {
-    setShowMatchReview(false);
-    setMatchedGroups([]);
+  const handleRemoveFile = (groupId: string, fileIndex: number) => {
+    setFileGroups(prev => {
+      const newGroups = prev.map(group => {
+        if (group.id === groupId) {
+          return {
+            ...group,
+            files: group.files.filter((_, idx) => idx !== fileIndex),
+          };
+        }
+        return group;
+      });
+      // Remove empty groups
+      return newGroups.filter(g => g.files.length > 0);
+    });
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleRenameGroup = (groupId: string, newName: string) => {
+    setFileGroups(prev =>
+      prev.map(group =>
+        group.id === groupId ? { ...group, name: newName } : group
+      )
+    );
+  };
 
-    if (files.length === 0) {
+  const handleDeleteGroup = (groupId: string) => {
+    setFileGroups(prev => prev.filter(group => group.id !== groupId));
+  };
+
+  const handleDeleteResult = (groupId: string) => {
+    setGroupResults(prev =>
+      prev.map((result) =>
+        result.group.id === groupId ? { ...result, status: 'cancelled' as const } : result
+      )
+    );
+  };
+
+  const handleSavePurchaseOrder = async (groupId: string) => {
+    const resultIndex = groupResults.findIndex(r => r.group.id === groupId);
+    if (resultIndex === -1) return;
+    
+    const data = getEditableData(resultIndex);
+    if (!data) return;
+
+    // Validate required fields
+    if (!data.supplier.name) {
+      alert('Supplier name is required');
+      return;
+    }
+
+    if (!data.poLines || data.poLines.length === 0) {
+      alert('At least one line item is required');
+      return;
+    }
+
+    setSavingIndex(resultIndex);
+
+    try {
+      const response = await fetch('/api/purchasing/po/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save purchase order');
+      }
+
+      // Mark the PO as successfully saved
+      setGroupResults(prev =>
+        prev.map((result) =>
+          result.group.id === groupId ? { ...result, status: 'success' as const } : result
+        )
+      );
+
+      // Show success message
+      const supplierName = data.supplier.name;
+      setSuccessMessage(`Purchase order for ${supplierName} saved successfully!`);
+      
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save purchase order');
+    } finally {
+      setSavingIndex(null);
+    }
+  };
+
+  const getEditableData = (index: number): ExtractedData | undefined => {
+    return editedData[index] || groupResults[index]?.extractedData;
+  };
+
+  const updateField = (resultIndex: number, field: string, value: any) => {
+    const currentData = getEditableData(resultIndex);
+    if (!currentData) return;
+
+    const keys = field.split('.');
+    const updated = JSON.parse(JSON.stringify(currentData));
+    
+    let obj: any = updated;
+    for (let i = 0; i < keys.length - 1; i++) {
+      obj = obj[keys[i]];
+    }
+    obj[keys[keys.length - 1]] = value;
+
+    setEditedData(prev => ({ ...prev, [resultIndex]: updated }));
+  };
+
+  const updateLineItem = (resultIndex: number, lineIndex: number, field: string, value: any) => {
+    const currentData = getEditableData(resultIndex);
+    if (!currentData) return;
+
+    const updated = JSON.parse(JSON.stringify(currentData));
+    updated.poLines[lineIndex][field] = value;
+
+    setEditedData(prev => ({ ...prev, [resultIndex]: updated }));
+  };
+
+  const addLineItem = (resultIndex: number) => {
+    const currentData = getEditableData(resultIndex);
+    if (!currentData) return;
+
+    const updated = JSON.parse(JSON.stringify(currentData));
+    updated.poLines.push({
+      description: '',
+      supplierSku: '',
+      quantity: 0,
+      unitCostExVAT: 0,
+      lineTotalExVAT: 0,
+    });
+
+    setEditedData(prev => ({ ...prev, [resultIndex]: updated }));
+  };
+
+  const removeLineItem = (resultIndex: number, lineIndex: number) => {
+    const currentData = getEditableData(resultIndex);
+    if (!currentData) return;
+
+    const updated = JSON.parse(JSON.stringify(currentData));
+    updated.poLines.splice(lineIndex, 1);
+
+    setEditedData(prev => ({ ...prev, [resultIndex]: updated }));
+  };
+
+  // Extract analysis logic into reusable function
+  const analyzeGroup = async (groupIndex: number, group: FileGroup) => {
+    // Update status to processing
+    setGroupResults(prev =>
+      prev.map((result, idx) =>
+        idx === groupIndex ? { ...result, status: 'processing' as const } : result
+      )
+    );
+
+    try {
+      // Create form data with all files in the group
+      const formData = new FormData();
+      group.files.forEach((file, index) => {
+        formData.append(`file${index}`, file);
+      });
+      formData.append('fileCount', group.files.length.toString());
+      formData.append('groupName', group.name);
+
+      // Send to extract API
+      const response = await fetch('/api/purchasing/po/extract', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Extraction failed');
+      }
+
+      // Update with extracted data
+      setGroupResults(prev =>
+        prev.map((result, idx) =>
+          idx === groupIndex
+            ? {
+                ...result,
+                status: 'extracted' as const,
+                extractedData: data.data,
+                duplicatesChecked: false,
+              }
+            : result
+        )
+      );
+
+      // Check for duplicates
+      try {
+        const duplicateResponse = await fetch('/api/purchasing/po/check-duplicates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            supplierName: data.data.supplier.name,
+            invoiceNumber: data.data.purchaseOrder.invoiceNumber,
+            invoiceDate: data.data.purchaseOrder.invoiceDate,
+            poLines: data.data.poLines,
+          }),
+        });
+
+        if (duplicateResponse.ok) {
+          const duplicateData = await duplicateResponse.json();
+          if (duplicateData.hasDuplicates) {
+            setGroupResults(prev =>
+              prev.map((result, idx) =>
+                idx === groupIndex
+                  ? {
+                      ...result,
+                      duplicates: duplicateData.duplicates,
+                      duplicatesChecked: true,
+                    }
+                  : result
+              )
+            );
+          } else {
+            setGroupResults(prev =>
+              prev.map((result, idx) =>
+                idx === groupIndex ? { ...result, duplicatesChecked: true } : result
+              )
+            );
+          }
+        }
+      } catch (duplicateError) {
+        console.error('Error checking duplicates:', duplicateError);
+        // Continue without duplicate checking
+        setGroupResults(prev =>
+          prev.map((result, idx) =>
+            idx === groupIndex ? { ...result, duplicatesChecked: true } : result
+          )
+        );
+      }
+    } catch (err) {
+      // Update with error
+      setGroupResults(prev =>
+        prev.map((result, idx) =>
+          idx === groupIndex
+            ? {
+                ...result,
+                status: 'error' as const,
+                error: err instanceof Error ? err.message : 'An error occurred',
+              }
+            : result
+        )
+      );
+    }
+  };
+
+  // Analyze a specific group
+  const handleAnalyzeGroup = async (groupId: string) => {
+    const groupIndex = fileGroups.findIndex(g => g.id === groupId);
+    if (groupIndex === -1) return;
+
+    const group = fileGroups[groupIndex];
+
+    // Initialize result if not exists
+    setGroupResults(prev => {
+      const existing = prev.find(r => r.group.id === groupId);
+      if (!existing) {
+        return [...prev, { group, status: 'pending' as const }];
+      }
+      return prev;
+    });
+
+    await analyzeGroup(groupIndex, group);
+  };
+
+  // Analyze all groups
+  const handleAnalyzeAll = async () => {
+    if (fileGroups.length === 0) {
       setError('Please select at least one file');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
-    // Initialize results for all files
-    const initialResults: FileUploadResult[] = files.map(file => ({
-      file,
+    // Initialize results for all groups
+    const initialResults: GroupResult[] = fileGroups.map(group => ({
+      group,
       status: 'pending' as const,
     }));
-    setUploadResults(initialResults);
+    setGroupResults(initialResults);
 
-    // Process files one by one
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      // Update status to processing
-      setUploadResults(prev => prev.map((result, idx) => 
-        idx === i ? { ...result, status: 'processing' as const } : result
-      ));
-
-      try {
-        // Create form data
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // Send to API
-        const response = await fetch('/api/purchasing/po/import', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const data: UploadResponse = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Upload failed');
-        }
-
-        // Update with success
-        setUploadResults(prev => prev.map((result, idx) => 
-          idx === i ? { ...result, status: 'success' as const, data } : result
-        ));
-      } catch (err) {
-        // Update with error
-        setUploadResults(prev => prev.map((result, idx) => 
-          idx === i ? { 
-            ...result, 
-            status: 'error' as const, 
-            error: err instanceof Error ? err.message : 'An error occurred' 
-          } : result
-        ));
-      }
+    // Process groups one by one
+    for (let i = 0; i < fileGroups.length; i++) {
+      await analyzeGroup(i, fileGroups[i]);
     }
 
-    // After all files are processed, check for matches
-    // Need to get the final state after all updates
-    setTimeout(() => {
-      setLoading(false);
-      
-      setUploadResults(currentResults => {
-        const successResults = currentResults.filter(r => r.status === 'success');
-        if (successResults.length > 1) {
-          const groups = findMatchingDocuments(successResults);
-          if (groups.length > 0) {
-            setMatchedGroups(groups);
-            setShowMatchReview(true);
-          }
-        }
-        return currentResults;
-      });
-    }, 100);
+    setLoading(false);
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await handleAnalyzeAll();
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Navigation Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
@@ -326,10 +528,10 @@ export default function ImportPage() {
               Purchase Order Import
             </h1>
             <p className="text-gray-600">
-              Upload invoice files (PNG, JPG, or PDF) to extract structured data using AI
+              Upload invoice files and group them before AI analysis
             </p>
-            <p className="text-sm text-gray-500 mt-2">
-              💡 Tip: You can select multiple files at once for batch processing
+            <p className="text-sm text-blue-600 font-medium mt-2">
+              💡 Tip: Drag files between groups to merge multiple pages into one purchase order
             </p>
           </div>
           <button
@@ -350,7 +552,7 @@ export default function ImportPage() {
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Upload Invoice Files (PNG, JPG, or PDF)
               </label>
-              
+
               {/* Drag and Drop Zone */}
               <div
                 onDragOver={handleDragOver}
@@ -371,7 +573,7 @@ export default function ImportPage() {
                   multiple
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                 />
-                
+
                 <div className="py-12 px-6 text-center">
                   <svg
                     className={`mx-auto h-16 w-16 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`}
@@ -394,48 +596,139 @@ export default function ImportPage() {
                     <span className="pl-1">or drag and drop</span>
                   </div>
                   <p className="text-xs leading-5 text-gray-600 mt-2">
-                    PNG, JPG, or PDF files (multiple files supported)
+                    PNG, JPG, or PDF files
                   </p>
                 </div>
               </div>
+            </div>
 
-              {/* Selected Files List */}
-              {files.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-gray-700">
-                    {files.length} file{files.length > 1 ? 's' : ''} selected:
-                  </p>
-                  {files.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <div>
-                          <span className="text-sm font-medium text-gray-900">{file.name}</span>
-                          <span className="text-xs text-gray-500 ml-2">({(file.size / 1024).toFixed(2)} KB)</span>
+            {/* File Groups */}
+            {fileGroups.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-900">
+                    File Groups ({fileGroups.length})
+                  </h3>
+                  {!loading && (
+                    <button
+                      type="button"
+                      onClick={() => setFileGroups([])}
+                      className="text-sm text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {fileGroups.map((group) => {
+                    const groupResult = groupResults.find(r => r.group.id === group.id);
+                    const isProcessing = groupResult?.status === 'processing';
+                    const isExtracted = groupResult?.status === 'extracted';
+                    const hasError = groupResult?.status === 'error';
+                    
+                    return (
+                    <div
+                      key={group.id}
+                      onDragOver={(e) => handleGroupDragOver(e, group.id)}
+                      onDragLeave={handleGroupDragLeave}
+                      onDrop={(e) => handleGroupDrop(e, group.id)}
+                      className={`border-2 rounded-lg p-4 transition-all relative ${
+                        dragOverGroup === group.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : isExtracted
+                          ? 'border-green-300 bg-green-50'
+                          : hasError
+                          ? 'border-red-300 bg-red-50'
+                          : isProcessing
+                          ? 'border-blue-300 bg-blue-50'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      {/* Status Badge */}
+                      {isExtracted && (
+                        <div className="absolute top-2 right-2">
+                          <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      )}
+                      {hasError && (
+                        <div className="absolute top-2 right-2">
+                          <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      )}
+                      {/* Group Header */}
+                      <div className="mb-3">
+                        <input
+                          type="text"
+                          value={group.name}
+                          onChange={(e) => handleRenameGroup(group.id, e.target.value)}
+                          disabled={loading}
+                          className="w-full text-sm font-medium text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-1 py-1"
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-gray-500">
+                            {group.files.length} file{group.files.length !== 1 ? 's' : ''}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleAnalyzeGroup(group.id)}
+                            disabled={loading || groupResults.some(r => r.group.id === group.id && (r.status === 'processing' || r.status === 'extracted' || r.status === 'success'))}
+                            className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {groupResults.find(r => r.group.id === group.id)?.status === 'processing' ? 'Analyzing...' : 'Analyze'}
+                          </button>
                         </div>
                       </div>
-                      {!loading && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile(index)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
+
+                      {/* Files in Group */}
+                      <div className="space-y-2">
+                        {group.files.filter(f => f).map((file, fileIndex) => (
+                          <div
+                            key={fileIndex}
+                            draggable={!loading}
+                            onDragStart={() => handleFileDragStart(group.id, fileIndex)}
+                            className={`flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200 ${
+                              !loading ? 'cursor-move hover:bg-gray-100' : ''
+                            }`}
+                          >
+                            <button
+                              onClick={() => handleFilePreview(file)}
+                              className="flex items-center gap-2 min-w-0 flex-1 text-left hover:text-blue-600 transition-colors"
+                            >
+                              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="text-xs text-gray-700 truncate hover:text-blue-600">{file.name}</span>
+                            </button>
+                            {!loading && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFile(group.id, fileIndex)}
+                                className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors flex-shrink-0"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={files.length === 0 || loading}
+              disabled={fileGroups.length === 0 || loading}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
@@ -460,14 +753,48 @@ export default function ImportPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Processing {uploadResults.filter(r => r.status === 'processing').length > 0 ? `(${uploadResults.filter(r => r.status === 'success').length + uploadResults.filter(r => r.status === 'error').length}/${files.length})` : '...'}
+                  Processing...
                 </span>
               ) : (
-                'Upload & Extract'
+                `Analyze All ${fileGroups.length} Group${fileGroups.length !== 1 ? 's' : ''}`
               )}
             </button>
           </form>
         </div>
+
+        {/* Success Message Display */}
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-green-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-medium text-green-800">Success</h3>
+                <p className="text-sm text-green-700 mt-1">{successMessage}</p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="flex-shrink-0 ml-3 text-green-400 hover:text-green-600"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -495,183 +822,398 @@ export default function ImportPage() {
           </div>
         )}
 
-        {/* Upload Results Display */}
-        {uploadResults.length > 0 && (
+        {/* Results Display */}
+        {groupResults.some(r => r.status !== 'success' && r.status !== 'cancelled') && (
           <div className="space-y-4">
-            {uploadResults.map((result, index) => (
+            {groupResults.map((result, index) => {
+              // Don't display groups that have been accepted or cancelled
+              if (result.status === 'success' || result.status === 'cancelled') {
+                return null;
+              }
+              
+              return (
               <div key={index} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    {result.status === 'success' && (
-                      <svg className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {result.status === 'error' && (
-                      <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    {result.status === 'processing' && (
-                      <svg className="animate-spin h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    )}
-                    {result.status === 'pending' && (
-                      <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    <h3 className="text-lg font-semibold text-gray-900">{result.file.name}</h3>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    result.status === 'success' ? 'bg-green-100 text-green-800' :
-                    result.status === 'error' ? 'bg-red-100 text-red-800' :
-                    result.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {result.status.charAt(0).toUpperCase() + result.status.slice(1)}
+                <div className="flex items-center gap-2 mb-4">
+                  {result.status === 'processing' && (
+                    <svg className="animate-spin h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {result.status === 'extracted' && (
+                    <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {result.status === 'error' && (
+                    <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <h3 className="text-lg font-semibold text-gray-900">{result.group.name}</h3>
+                  <span className="text-sm text-gray-500">
+                    ({result.group.files.length} file{result.group.files.length !== 1 ? 's' : ''})
                   </span>
                 </div>
 
-                {result.status === 'success' && result.data?.success && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Supplier</p>
-                      <p className="text-sm font-medium text-gray-900">{result.data.data?.supplier.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Invoice #</p>
-                      <p className="text-sm font-medium text-gray-900">{result.data.data?.purchaseOrder.invoiceNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Lines</p>
-                      <p className="text-sm font-medium text-gray-900">{result.data.data?.savedLines}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Total</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {result.data.data?.purchaseOrder.currency} {result.data.data?.totals.grandTotal?.toFixed(2) || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
+                {result.status === 'processing' && (
+                  <p className="text-sm text-gray-600">Analyzing files...</p>
                 )}
 
                 {result.status === 'error' && (
-                  <div className="text-sm text-red-700">
+                  <div className="text-sm text-red-600">
                     <p className="font-medium">Error:</p>
                     <p>{result.error}</p>
                   </div>
                 )}
 
-                {result.status === 'processing' && (
-                  <p className="text-sm text-gray-600">Processing file...</p>
+                {result.status === 'extracted' && result.extractedData && (
+                  <div className="space-y-6">
+                    {/* Duplicate Warning */}
+                    {result.duplicates && result.duplicates.length > 0 && !dismissedDuplicates.has(result.group.id) && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                          </div>
+                          <div className="ml-3 flex-1">
+                            <h3 className="text-sm font-medium text-yellow-800">Possible Duplicate Order Detected</h3>
+                            <div className="mt-2 text-sm text-yellow-700">
+                              <p className="mb-2">This order may already exist in the system:</p>
+                              {result.duplicates.map((dup, dupIdx) => (
+                                <div key={dupIdx} className="mb-2 p-2 bg-yellow-100 rounded border border-yellow-300">
+                                  <p className="font-medium">
+                                    {dup.supplierName} - {dup.invoiceNumber || 'No Invoice #'}
+                                    {dup.invoiceDate && ` (${new Date(dup.invoiceDate).toLocaleDateString()})`}
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    Match Score: {dup.matchScore}% | {dup.matchReasons.join(', ')}
+                                  </p>
+                                  <p className="text-xs text-yellow-600">
+                                    Created: {new Date(dup.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setDismissedDuplicates(prev => new Set(prev).add(result.group.id))}
+                            className="flex-shrink-0 ml-3 text-yellow-400 hover:text-yellow-600 transition-colors"
+                            title="Dismiss warning"
+                          >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Supplier Information */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Supplier Information</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Supplier Name *</label>
+                          <input
+                            type="text"
+                            value={getEditableData(index)?.supplier.name || ''}
+                            onChange={(e) => updateField(index, 'supplier.name', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={getEditableData(index)?.supplier.email || ''}
+                            onChange={(e) => updateField(index, 'supplier.email', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Phone</label>
+                          <input
+                            type="text"
+                            value={getEditableData(index)?.supplier.phone || ''}
+                            onChange={(e) => updateField(index, 'supplier.phone', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">VAT Number</label>
+                          <input
+                            type="text"
+                            value={getEditableData(index)?.supplier.vatNumber || ''}
+                            onChange={(e) => updateField(index, 'supplier.vatNumber', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Address</label>
+                          <textarea
+                            value={getEditableData(index)?.supplier.address || ''}
+                            onChange={(e) => updateField(index, 'supplier.address', e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Purchase Order Information */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Purchase Order Details</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Invoice Number</label>
+                          <input
+                            type="text"
+                            value={getEditableData(index)?.purchaseOrder.invoiceNumber || ''}
+                            onChange={(e) => updateField(index, 'purchaseOrder.invoiceNumber', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Invoice Date</label>
+                          <input
+                            type="date"
+                            value={getEditableData(index)?.purchaseOrder.invoiceDate || ''}
+                            onChange={(e) => updateField(index, 'purchaseOrder.invoiceDate', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Currency</label>
+                          <input
+                            type="text"
+                            value={getEditableData(index)?.purchaseOrder.originalCurrency || ''}
+                            onChange={(e) => updateField(index, 'purchaseOrder.originalCurrency', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Terms</label>
+                          <input
+                            type="text"
+                            value={getEditableData(index)?.purchaseOrder.paymentTerms || ''}
+                            onChange={(e) => updateField(index, 'purchaseOrder.paymentTerms', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Line Items Table */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-900">Line Items</h4>
+                        <button
+                          type="button"
+                          onClick={() => addLineItem(index)}
+                          className="inline-flex items-center px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add Line
+                        </button>
+                      </div>
+                      
+                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Description</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">SKU</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase w-24">Qty</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase w-32">Unit Price</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase w-32">Line Total</th>
+                              <th className="px-3 py-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {getEditableData(index)?.poLines.map((line, lineIndex) => (
+                              <tr key={lineIndex}>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="text"
+                                    value={line.description}
+                                    onChange={(e) => updateLineItem(index, lineIndex, 'description', e.target.value)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="text"
+                                    value={line.supplierSku || ''}
+                                    onChange={(e) => updateLineItem(index, lineIndex, 'supplierSku', e.target.value)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    value={line.quantity}
+                                    onChange={(e) => updateLineItem(index, lineIndex, 'quantity', parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={line.unitCostExVAT}
+                                    onChange={(e) => updateLineItem(index, lineIndex, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={line.lineTotalExVAT}
+                                    onChange={(e) => updateLineItem(index, lineIndex, 'lineTotalExVAT', parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeLineItem(index, lineIndex)}
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Totals */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Totals</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Subtotal (ex VAT)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={getEditableData(index)?.totals.subtotal || 0}
+                            onChange={(e) => updateField(index, 'totals.subtotal', parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Extras (Shipping, etc.)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={getEditableData(index)?.totals.extras || 0}
+                            onChange={(e) => updateField(index, 'totals.extras', parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">VAT</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={getEditableData(index)?.totals.vat || 0}
+                            onChange={(e) => updateField(index, 'totals.vat', parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Total</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={getEditableData(index)?.totals.total || 0}
+                            onChange={(e) => updateField(index, 'totals.total', parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteResult(result.group.id)}
+                        className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSavePurchaseOrder(result.group.id)}
+                        disabled={savingIndex === index}
+                        className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingIndex === index ? 'Saving...' : 'Save Purchase Order'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-            ))}
-
-            {uploadResults.some(r => r.status === 'success') && !loading && (
-              <div className="pt-4">
-                <button
-                  onClick={navigateToView}
-                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  View All Purchase Orders
-                </button>
-              </div>
-            )}
+              );
+            })}
           </div>
         )}
 
-        {/* Match Review Modal */}
-        {showMatchReview && matchedGroups.length > 0 && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border max-w-4xl shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Matching Documents Detected
-                  </h3>
-                </div>
+        {/* File Preview Modal */}
+        {previewFile && previewUrl && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            onClick={closePreview}
+          >
+            <div 
+              className="relative max-w-7xl max-h-full bg-white rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 truncate max-w-md">
+                  {previewFile.name}
+                </h3>
+                <button
+                  onClick={closePreview}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex">
-                    <svg className="h-5 w-5 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-800">Smart Matching</h4>
-                      <p className="text-sm text-blue-700 mt-1">
-                        The AI detected {matchedGroups.length} group{matchedGroups.length !== 1 ? 's' : ''} of documents that appear to be from the same order. 
-                        Would you like to automatically combine them into single purchase orders?
-                      </p>
-                    </div>
+              {/* Modal Content */}
+              <div className="p-4 overflow-auto max-h-[80vh]">
+                {previewFile.type.startsWith('image/') ? (
+                  <img 
+                    src={previewUrl} 
+                    alt={previewFile.name}
+                    className="max-w-full h-auto rounded"
+                  />
+                ) : previewFile.type === 'application/pdf' ? (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-[70vh] rounded"
+                    title={previewFile.name}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">Preview not available for this file type</p>
                   </div>
-                </div>
-
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {matchedGroups.map((group) => (
-                    <div key={group.groupId} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 text-xs font-medium rounded ${
-                            group.confidence === 'high' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {group.confidence === 'high' ? 'High Confidence' : 'Medium Confidence'}
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {group.files.length} documents
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-gray-600 mb-3">
-                        <strong>Match Reason:</strong> {group.matchReason}
-                      </p>
-
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-gray-500 uppercase">Files to be merged:</p>
-                        {group.files.map((file, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 p-2 rounded">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span>{file.name}</span>
-                            <span className="text-xs text-gray-500">
-                              ({group.results[idx].data?.data?.savedLines || 0} lines)
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <p className="text-sm text-gray-600">
-                          <strong>Result:</strong> Will create 1 purchase order with {' '}
-                          {group.results.reduce((sum, r) => sum + (r.data?.data?.savedLines || 0), 0)} total line items
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={handleSkipMerge}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Keep Separate
-                  </button>
-                  <button
-                    onClick={handleMergeMatches}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Merge Matched Documents
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
