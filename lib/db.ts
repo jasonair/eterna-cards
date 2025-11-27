@@ -217,6 +217,15 @@ export async function deleteSupplier(supplierId: string): Promise<{
   // Delete all line items for these purchase orders (cascade will handle this)
   // Delete all purchase orders for this supplier (cascade will handle this)
   // Delete the supplier
+  const { error: detachError } = await supabase
+    .from('products')
+    .update({ supplierid: null })
+    .eq('supplierid', supplierId);
+
+  if (detachError) {
+    throw new Error(`Failed to detach products from supplier: ${detachError.message}`);
+  }
+
   const { error } = await supabase
     .from('suppliers')
     .delete()
@@ -241,6 +250,35 @@ export async function deleteSupplier(supplierId: string): Promise<{
     success: true,
     deletedPurchaseOrders: deletedPurchaseOrders || 0,
     deletedLines: deletedLines || 0,
+  };
+}
+
+export async function deleteProductAndInventory(productId: string): Promise<{
+  deletedInventoryCount: number;
+  deletedTransitCount: number;
+}> {
+  const { count: inventoryCount } = await supabase
+    .from('inventory')
+    .select('*', { count: 'exact', head: true })
+    .eq('productid', productId);
+
+  const { count: transitCount } = await supabase
+    .from('transit')
+    .select('*', { count: 'exact', head: true })
+    .eq('productid', productId);
+
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', productId);
+
+  if (error) {
+    throw new Error(`Failed to delete product: ${error.message}`);
+  }
+
+  return {
+    deletedInventoryCount: inventoryCount || 0,
+    deletedTransitCount: transitCount || 0,
   };
 }
 
@@ -666,21 +704,49 @@ export async function syncInventoryFromPurchaseOrder(params: {
 
 // Get an inventory snapshot (products + on-hand + quantity in transit)
 export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
-  const [products, inventory, transit] = await Promise.all([
-    supabase.from('products').select('*').then(({ data }) => data || []),
-    supabase.from('inventory').select('*').then(({ data }) => data || []),
-    supabase.from('transit').select('*').then(({ data }) => data || []),
+  const [productsRes, inventoryRes, transitRes] = await Promise.all([
+    supabase.from('products').select('*'),
+    supabase.from('inventory').select('*'),
+    supabase.from('transit').select('*'),
   ]);
 
-  const items: InventoryItemView[] = products.map((product) => {
-    const inv = inventory.find((i) => i.productid === product.id) || null;
-    const quantityInTransit = transit
-      .filter((t) => t.productid === product.id && t.remainingquantity > 0)
-      .reduce((sum, t) => sum + t.remainingquantity, 0);
+  const rawProducts = productsRes.data || [];
+  const rawInventory = inventoryRes.data || [];
+  const rawTransit = transitRes.data || [];
+
+  const typedProducts: Product[] = rawProducts.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    primarySku: p.primarysku ?? null,
+    supplierSku: p.suppliersku ?? null,
+    barcodes: p.barcodes ?? [],
+    aliases: p.aliases ?? [],
+    supplierId: p.supplierid ?? null,
+    category: p.category ?? null,
+    tags: p.tags ?? [],
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }));
+
+  const items: InventoryItemView[] = typedProducts.map((product) => {
+    const invRow = rawInventory.find((i: any) => i.productid === product.id) || null;
+    const inventory: InventoryRecord | null = invRow
+      ? {
+          id: invRow.id,
+          productId: invRow.productid,
+          quantityOnHand: Number(invRow.quantityonhand ?? 0),
+          averageCostGBP: Number(invRow.averagecostgbp ?? 0),
+          lastUpdated: invRow.lastupdated,
+        }
+      : null;
+
+    const quantityInTransit = rawTransit
+      .filter((t: any) => t.productid === product.id && Number(t.remainingquantity ?? 0) > 0)
+      .reduce((sum: number, t: any) => sum + Number(t.remainingquantity ?? 0), 0);
 
     return {
       product,
-      inventory: inv,
+      inventory,
       quantityInTransit,
     };
   });
@@ -701,8 +767,9 @@ export interface ReceiveStockResult {
 export async function receiveStockForProduct(params: {
   productId: string;
   quantity: number;
+  poLineId?: string;
 }): Promise<ReceiveStockResult> {
-  const { productId, quantity } = params;
+  const { productId, quantity, poLineId } = params;
 
   if (!productId) {
     throw new Error('productId is required');
@@ -724,8 +791,8 @@ export async function receiveStockForProduct(params: {
 
   const now = new Date().toISOString();
 
-  // Get or create inventory record
-  let inventoryRecord: InventoryRecord | null = null;
+  // Get or create inventory record (raw DB row)
+  let inventoryRecord: any = null;
   const { data: existingInventory } = await supabase
     .from('inventory')
     .select('*')
@@ -752,12 +819,24 @@ export async function receiveStockForProduct(params: {
   }
 
   // Get transit records sorted by creation date
-  const { data: transitRecords } = await supabase
+  let transitQuery = supabase
     .from('transit')
     .select('*')
     .eq('productid', productId)
-    .gt('remainingQuantity', 0)
-    .order('createdAt', { ascending: true });
+    .gt('remainingquantity', 0);
+
+  if (poLineId) {
+    transitQuery = transitQuery.eq('polineid', poLineId);
+  }
+
+  const { data: transitRecords, error: transitError } = await transitQuery.order(
+    'created_at',
+    { ascending: true },
+  );
+
+  if (transitError) {
+    throw new Error(`Failed to load transit records: ${transitError.message}`);
+  }
 
   if (!transitRecords || transitRecords.length === 0) {
     throw new Error('No in-transit quantity available for this product');
@@ -771,11 +850,12 @@ export async function receiveStockForProduct(params: {
   for (const t of transitRecords) {
     if (remainingToReceive <= 0) break;
 
-    const available = t.remainingQuantity;
+    const available = Number(t.remainingquantity ?? 0);
     if (available <= 0) continue;
 
     const take = Math.min(remainingToReceive, available);
-    const unitCost = typeof t.unitCostGBP === 'number' && t.unitCostGBP >= 0 ? t.unitCostGBP : 0;
+    const unitCost =
+      typeof t.unitcostgbp === 'number' && t.unitcostgbp >= 0 ? Number(t.unitcostgbp) : 0;
 
     incomingTotalValue += take * unitCost;
     receivedQuantity += take;
@@ -785,9 +865,9 @@ export async function receiveStockForProduct(params: {
     await supabase
       .from('transit')
       .update({
-        remainingQuantity: newRemaining,
+        remainingquantity: newRemaining,
         status: newStatus,
-        updatedAt: now,
+        updated_at: now,
       })
       .eq('id', t.id);
 
@@ -803,8 +883,8 @@ export async function receiveStockForProduct(params: {
     throw new Error('Failed to get inventory record');
   }
 
-  const currentOnHand = inventoryRecord.quantityOnHand;
-  const currentAvg = inventoryRecord.averageCostGBP;
+  const currentOnHand = Number(inventoryRecord.quantityonhand ?? 0);
+  const currentAvg = Number(inventoryRecord.averagecostgbp ?? 0);
   const currentValue = currentOnHand * currentAvg;
 
   const newOnHand = currentOnHand + receivedQuantity;
@@ -819,7 +899,7 @@ export async function receiveStockForProduct(params: {
       averagecostgbp: newAvg,
       lastupdated: now,
     })
-    .eq('id', inventoryRecord!.id);
+    .eq('id', inventoryRecord.id);
 
   return {
     productId,

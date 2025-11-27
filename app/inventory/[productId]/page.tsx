@@ -102,6 +102,15 @@ export default function ProductHistoryPage() {
   const [data, setData] = useState<ProductHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    barcodes: '',
+    tags: '',
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -126,6 +135,18 @@ export default function ProductHistoryPage() {
     load();
   }, [productId]);
 
+  useEffect(() => {
+    if (data?.product) {
+      setEditForm({
+        name: data.product.name || '',
+        sku: data.product.primarySku || data.product.supplierSku || '',
+        category: data.product.category || '',
+        barcodes: (data.product.barcodes || []).join(', '),
+        tags: (data.product.tags || []).join(', '),
+      });
+    }
+  }, [data]);
+
   const formatDate = (value: string | null | undefined) => {
     if (!value) return 'N/A';
     const d = new Date(value);
@@ -140,6 +161,61 @@ export default function ProductHistoryPage() {
   const formatCurrency = (amount: number | undefined | null) => {
     if (amount === undefined || amount === null || isNaN(amount)) return '£0.00 GBP';
     return `£${amount.toFixed(2)} GBP`;
+  };
+
+  const handleEditFieldChange = (field: keyof typeof editForm, value: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveProduct = async () => {
+    if (!data) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const normalizeList = (input: string): string[] =>
+        input
+          .split(',')
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0);
+
+      const sku = editForm.sku.trim();
+
+      const payload = {
+        name: editForm.name.trim() || data.product.name,
+        primarySku: sku || null,
+        supplierSku: sku || null,
+        category: editForm.category.trim() || null,
+        barcodes: normalizeList(editForm.barcodes),
+        tags: normalizeList(editForm.tags),
+      };
+
+      const res = await fetch(
+        `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update product');
+      }
+
+      const updated: Product = json.data.product;
+      setData((prev) => (prev ? { ...prev, product: updated } : prev));
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update product');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -234,33 +310,122 @@ export default function ProductHistoryPage() {
         </div>
 
         {/* Identity section */}
-        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 text-xs space-y-2">
+        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 text-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-wide text-gray-400">Identity</p>
+            <div className="flex items-center gap-2">
+              {editing ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(false);
+                      if (data?.product) {
+                        setEditForm({
+                          name: data.product.name || '',
+                          sku: data.product.primarySku || data.product.supplierSku || '',
+                          category: data.product.category || '',
+                          barcodes: (data.product.barcodes || []).join(', '),
+                          tags: (data.product.tags || []).join(', '),
+                        });
+                      }
+                    }}
+                    disabled={saving}
+                    className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a] disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveProduct}
+                    disabled={saving}
+                    className="px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] hover:bg-[#ff8c42] disabled:opacity-50"
+                  >
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a]"
+                >
+                  Edit product
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <p className="text-gray-400">Primary SKU</p>
-              <p className="text-gray-100 font-mono">
-                {product.primarySku || product.supplierSku || '-'}
-              </p>
+              <p className="text-gray-400">Name</p>
+              {editing ? (
+                <input
+                  value={editForm.name}
+                  onChange={(e) => handleEditFieldChange('name', e.target.value)}
+                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                />
+              ) : (
+                <p className="text-gray-100">{product.name}</p>
+              )}
+            </div>
+            <div>
+              <p className="text-gray-400">SKU</p>
+              {editing ? (
+                <input
+                  value={editForm.sku}
+                  onChange={(e) => handleEditFieldChange('sku', e.target.value)}
+                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                />
+              ) : (
+                <p className="text-gray-100 font-mono">
+                  {product.primarySku || product.supplierSku || '-'}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-gray-400">Barcodes</p>
-              <p className="text-gray-100 font-mono truncate">
-                {product.barcodes && product.barcodes.length
-                  ? product.barcodes.join(', ')
-                  : '-'}
-              </p>
+              {editing ? (
+                <input
+                  value={editForm.barcodes}
+                  onChange={(e) => handleEditFieldChange('barcodes', e.target.value)}
+                  placeholder="Comma-separated"
+                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                />
+              ) : (
+                <p className="text-gray-100 font-mono truncate">
+                  {product.barcodes && product.barcodes.length
+                    ? product.barcodes.join(', ')
+                    : '-'}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-gray-400">Category</p>
-              <p className="text-gray-100">
-                {product.category || '-'}
-              </p>
+              {editing ? (
+                <input
+                  value={editForm.category}
+                  onChange={(e) => handleEditFieldChange('category', e.target.value)}
+                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                />
+              ) : (
+                <p className="text-gray-100">{product.category || '-'}</p>
+              )}
             </div>
             <div>
               <p className="text-gray-400">Tags</p>
-              <p className="text-gray-100 truncate">
-                {product.tags && product.tags.length ? product.tags.join(', ') : '-'}
-              </p>
+              {editing ? (
+                <input
+                  value={editForm.tags}
+                  onChange={(e) => handleEditFieldChange('tags', e.target.value)}
+                  placeholder="Comma-separated"
+                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                />
+              ) : (
+                <p className="text-gray-100 truncate">
+                  {product.tags && product.tags.length ? product.tags.join(', ') : '-'}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -283,7 +448,8 @@ export default function ProductHistoryPage() {
                     <th className="px-3 py-2 text-right font-medium text-gray-400">Ordered</th>
                     <th className="px-3 py-2 text-right font-medium text-gray-400">Received</th>
                     <th className="px-3 py-2 text-right font-medium text-gray-400">Remaining</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-400">Unit cost</th>
+                    <th className="px-3 py-2 text-right font-medium text-gray-400">Unit price</th>
+                    <th className="px-3 py-2 text-right font-medium text-gray-400">Line total</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-400">Status</th>
                   </tr>
                 </thead>
@@ -334,7 +500,13 @@ export default function ProductHistoryPage() {
                           {remaining}
                         </td>
                         <td className="px-3 py-2 text-right align-top text-gray-100">
-                          {formatCurrency(row.transit.unitCostGBP)}
+                          {formatCurrency(row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP)}
+                        </td>
+                        <td className="px-3 py-2 text-right align-top text-gray-100">
+                          {formatCurrency(
+                            row.poLine?.lineTotalExVAT ??
+                              (row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP) * ordered,
+                          )}
                         </td>
                         <td className="px-3 py-2 align-top">
                           <span

@@ -1,19 +1,66 @@
 import { NextResponse } from 'next/server';
-import { getDb, syncInventoryFromPurchaseOrder, type POLine } from '@/lib/db';
+import { supabase } from '@/lib/supabaseClient';
+import { syncInventoryFromPurchaseOrder, type POLine } from '@/lib/db';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const db = await getDb();
-    await db.read();
+    const { data: rawPurchaseOrders, error: poError } = await supabase
+      .from('purchaseorders')
+      .select('id, supplierid');
 
-    const purchaseOrders = db.data.purchaseOrders || [];
-    const poLines = db.data.poLines || [];
-    const existingTransit = db.data.transit || [];
+    if (poError || !rawPurchaseOrders) {
+      console.error('Inventory backfill error: failed to load purchase orders', poError);
+      return NextResponse.json(
+        { error: 'Failed to backfill inventory from purchase orders' },
+        { status: 500 }
+      );
+    }
 
-    const poIdsWithTransit = new Set(existingTransit.map((t) => t.purchaseOrderId));
+    const { data: rawPoLines, error: linesError } = await supabase
+      .from('polines')
+      .select('*');
+
+    if (linesError || !rawPoLines) {
+      console.error('Inventory backfill error: failed to load PO lines', linesError);
+      return NextResponse.json(
+        { error: 'Failed to backfill inventory from purchase orders' },
+        { status: 500 }
+      );
+    }
+
+    const { data: existingTransit, error: transitError } = await supabase
+      .from('transit')
+      .select('purchaseorderid');
+
+    if (transitError || !existingTransit) {
+      console.error('Inventory backfill error: failed to load transit rows', transitError);
+      return NextResponse.json(
+        { error: 'Failed to backfill inventory from purchase orders' },
+        { status: 500 }
+      );
+    }
+
+    const purchaseOrders = rawPurchaseOrders.map((po: any) => ({
+      id: po.id as string,
+      supplierId: po.supplierid as string,
+    }));
+
+    const poLines: POLine[] = rawPoLines.map((line: any) => ({
+      id: line.id as string,
+      purchaseOrderId: line.purchaseorderid as string,
+      description: line.description as string,
+      supplierSku: (line.suppliersku as string | null) ?? null,
+      quantity: Number(line.quantity) || 0,
+      unitCostExVAT: Number(line.unitcostexvat) || 0,
+      lineTotalExVAT: Number(line.linetotalexvat) || 0,
+    }));
+
+    const poIdsWithTransit = new Set(
+      existingTransit.map((t: any) => t.purchaseorderid as string)
+    );
 
     const linesByPo = new Map<string, POLine[]>();
     for (const line of poLines) {

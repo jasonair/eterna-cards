@@ -54,12 +54,12 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [receivingProductId, setReceivingProductId] = useState<string | null>(null);
-  const [receiveQuantity, setReceiveQuantity] = useState<string>('');
-  const [receiveLoading, setReceiveLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [barcodeProductId, setBarcodeProductId] = useState<string | null>(null);
   const [barcodeValue, setBarcodeValue] = useState('');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
+
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
@@ -146,40 +146,6 @@ export default function InventoryPage() {
     }
   };
 
-  const handleOpenReceive = (row: InventoryRow) => {
-    setReceivingProductId(row.product.id);
-    setReceiveQuantity(String(row.quantityInTransit || 0));
-  };
-
-  const handleReceiveSubmit = async () => {
-    if (!receivingProductId) return;
-    const qty = Number(receiveQuantity);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      alert('Please enter a valid quantity to receive');
-      return;
-    }
-
-    try {
-      setReceiveLoading(true);
-      const res = await fetch('/api/inventory/receive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: receivingProductId, quantity: qty }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to receive stock');
-      }
-      setReceivingProductId(null);
-      setReceiveQuantity('');
-      await handleRefresh();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to receive stock');
-    } finally {
-      setReceiveLoading(false);
-    }
-  };
-
   const handleAddBarcode = async () => {
     if (!barcodeProductId) return;
     const code = barcodeValue.trim();
@@ -206,6 +172,35 @@ export default function InventoryPage() {
       alert(err instanceof Error ? err.message : 'Failed to add barcode');
     } finally {
       setBarcodeLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    if (
+      !window.confirm(
+        `Delete "${product.name}" from inventory? This will also remove any on-hand and in-transit records for this product.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingProductId(product.id);
+      const res = await fetch(
+        `/api/inventory/product?id=${encodeURIComponent(product.id)}`,
+        {
+          method: 'DELETE',
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete product');
+      }
+      await handleRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete product');
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
@@ -298,6 +293,30 @@ export default function InventoryPage() {
               </svg>
               Refresh
             </button>
+            <div className="inline-flex rounded-md border border-[#3a3a3a] bg-[#2a2a2a] overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 font-medium transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-[#ff6b35] text-white'
+                    : 'text-gray-300 hover:bg-[#3a3a3a]'
+                }`}
+              >
+                Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 font-medium border-l border-[#3a3a3a] transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-[#ff6b35] text-white'
+                    : 'text-gray-300 hover:bg-[#3a3a3a]'
+                }`}
+              >
+                List
+              </button>
+            </div>
           </div>
         </div>
 
@@ -426,12 +445,10 @@ export default function InventoryPage() {
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg p-8 text-center text-sm text-gray-300">
               No products match this search.
             </div>
-          ) : (
+          ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredItems.map((row) => {
                 const hasOnHand = !!row.inventory && row.inventory.quantityOnHand > 0;
-                const hasTransit = row.quantityInTransit > 0;
-                const isReceiving = receivingProductId === row.product.id;
                 const isAddingBarcode = barcodeProductId === row.product.id;
 
                 const initials = row.product.name
@@ -476,49 +493,6 @@ export default function InventoryPage() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 mt-1">
-                      {hasTransit && (
-                        <div className="flex flex-col gap-2">
-                          {!isReceiving ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenReceive(row)}
-                              className="inline-flex items-center justify-center px-3 py-1.5 text-xs rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42]"
-                            >
-                              Confirm arrival / receive stock
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={receiveQuantity}
-                                onChange={(e) => setReceiveQuantity(e.target.value)}
-                                className="w-20 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-                              />
-                              <button
-                                type="button"
-                                onClick={handleReceiveSubmit}
-                                disabled={receiveLoading}
-                                className="px-3 py-1.5 text-xs rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] disabled:opacity-50"
-                              >
-                                {receiveLoading ? 'Saving...' : 'Receive'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setReceivingProductId(null);
-                                  setReceiveQuantity('');
-                                }}
-                                className="px-2 py-1.5 text-xs rounded-md bg-transparent text-gray-300 hover:text-white"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <button
                           type="button"
@@ -565,10 +539,136 @@ export default function InventoryPage() {
                           </button>
                         </div>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProduct(row.product)}
+                        disabled={deletingProductId === row.product.id}
+                        className="mt-1 inline-flex items-center justify-center px-3 py-1.5 text-xs rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
+                      >
+                        {deletingProductId === row.product.id ? 'Deleting...' : 'Delete item'}
+                      </button>
                     </div>
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-[#3a3a3a] text-sm">
+                  <thead className="bg-[#1a1a1a]">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Product
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Supplier
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        On hand
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Transit
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#3a3a3a]">
+                    {filteredItems.map((row) => {
+                      const hasOnHand = !!row.inventory && row.inventory.quantityOnHand > 0;
+                      const isAddingBarcode = barcodeProductId === row.product.id;
+                      const onHand = row.inventory?.quantityOnHand || 0;
+
+                      return (
+                        <tr key={row.product.id} className="hover:bg-[#1a1a1a]">
+                          <td className="px-4 py-3 align-top">
+                            <div className="flex flex-col">
+                              <a
+                                href={`/inventory/${row.product.id}`}
+                                className="text-gray-100 font-medium hover:text-white truncate"
+                              >
+                                {row.product.name}
+                              </a>
+                              <span className="text-xs text-gray-400 truncate">
+                                {row.product.primarySku || row.product.supplierSku || 'No SKU'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 align-top text-sm text-gray-300 truncate">
+                            {row.supplier?.name || 'Unknown supplier'}
+                          </td>
+                          <td className="px-4 py-3 align-top text-right text-gray-100">
+                            {onHand}
+                          </td>
+                          <td className="px-4 py-3 align-top text-right text-gray-100">
+                            {row.quantityInTransit}
+                          </td>
+                          <td className="px-4 py-3 align-top text-right">
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBarcodeProductId(row.product.id);
+                                    setBarcodeValue('');
+                                  }}
+                                  className="px-2 py-1 text-[11px] rounded-md border border-[#3a3a3a] text-[#ff6b35] hover:bg-[#3a3a3a]"
+                                >
+                                  {row.product.barcodes?.length ? 'Add barcode' : 'Add barcode'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteProduct(row.product)}
+                                  disabled={deletingProductId === row.product.id}
+                                  className="px-2 py-1 text-[11px] rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
+                                >
+                                  {deletingProductId === row.product.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                                {hasOnHand && (
+                                  <span className="px-2 py-1 text-[10px] rounded-full bg-[#1a3a1a] text-green-300">
+                                    In stock
+                                  </span>
+                                )}
+                              </div>
+                              {isAddingBarcode && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <input
+                                    value={barcodeValue}
+                                    onChange={(e) => setBarcodeValue(e.target.value)}
+                                    placeholder="Scan or enter barcode"
+                                    className="w-40 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleAddBarcode}
+                                    disabled={barcodeLoading}
+                                    className="px-3 py-1.5 text-xs rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] disabled:opacity-50"
+                                  >
+                                    {barcodeLoading ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setBarcodeProductId(null);
+                                      setBarcodeValue('');
+                                    }}
+                                    className="px-2 py-1.5 text-xs rounded-md bg-transparent text-gray-300 hover:text-white"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

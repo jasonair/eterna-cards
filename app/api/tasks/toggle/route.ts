@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { supabase } from '@/lib/supabaseClient';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    const db = await getDb();
-    await db.read();
-
     const body = await request.json();
     const id = body?.id as string | undefined;
     const explicitCompleted = body?.completed as boolean | undefined;
@@ -20,31 +17,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!Array.isArray(db.data.tasks)) {
-      db.data.tasks = [];
-    }
+    const { data: existingTask, error: fetchError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    const taskIndex = db.data.tasks.findIndex((t) => t.id === id);
-    if (taskIndex === -1) {
+    if (fetchError || !existingTask) {
       return NextResponse.json(
         { error: 'Task not found' },
         { status: 404 }
       );
     }
 
-    const task = db.data.tasks[taskIndex];
     const now = new Date().toISOString();
-
     const newCompleted =
-      typeof explicitCompleted === 'boolean' ? explicitCompleted : !task.completed;
+      typeof explicitCompleted === 'boolean' ? explicitCompleted : !existingTask.completed;
 
-    task.completed = newCompleted;
-    task.completedAt = newCompleted ? now : null;
+    const { data: updatedTask, error: updateError } = await supabase
+      .from('tasks')
+      .update({
+        completed: newCompleted,
+        completed_at: newCompleted ? now : null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-    db.data.tasks[taskIndex] = task;
-    await db.write();
+    if (updateError || !updatedTask) {
+      return NextResponse.json(
+        { error: 'Failed to update task' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ success: true, data: task });
+    return NextResponse.json({ success: true, data: updatedTask });
   } catch (error) {
     console.error('Toggle task error:', error);
     return NextResponse.json(

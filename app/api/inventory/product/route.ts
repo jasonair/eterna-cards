@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
+import { deleteProductAndInventory } from '@/lib/db';
 
 // GET product + inventory + transit history for /inventory/[productId]
 export async function GET(request: NextRequest) {
@@ -177,6 +178,154 @@ export async function GET(request: NextRequest) {
     console.error('Get product history error:', error);
     return NextResponse.json(
       { error: 'Failed to load product history' },
+      { status: 500 }
+    );
+  }
+}
+
+// Update product metadata (name, SKUs, category, tags, barcodes)
+export async function PUT(request: NextRequest) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Product id is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+
+    const updates: any = {};
+
+    if (typeof body.name === 'string') {
+      const name = body.name.trim();
+      if (name.length === 0) {
+        return NextResponse.json(
+          { error: 'Name cannot be empty' },
+          { status: 400 }
+        );
+      }
+      updates.name = name;
+    }
+
+    if ('primarySku' in body) {
+      const raw = body.primarySku;
+      const value = typeof raw === 'string' ? raw.trim() : '';
+      updates.primarysku = value.length > 0 ? value : null;
+    }
+
+    if ('supplierSku' in body) {
+      const raw = body.supplierSku;
+      const value = typeof raw === 'string' ? raw.trim() : '';
+      updates.suppliersku = value.length > 0 ? value : null;
+    }
+
+    if ('category' in body) {
+      const raw = body.category;
+      const value = typeof raw === 'string' ? raw.trim() : '';
+      updates.category = value.length > 0 ? value : null;
+    }
+
+    if (Array.isArray(body.barcodes)) {
+      updates.barcodes = body.barcodes;
+    }
+
+    if (Array.isArray(body.tags)) {
+      updates.tags = body.tags;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields provided for update' },
+        { status: 400 }
+      );
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    const { data: updatedRow, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error || !updatedRow) {
+      console.error('Update product error:', error);
+      return NextResponse.json(
+        { error: 'Failed to update product' },
+        { status: 500 }
+      );
+    }
+
+    const product = {
+      id: updatedRow.id,
+      name: updatedRow.name,
+      primarySku: updatedRow.primarysku ?? null,
+      supplierSku: updatedRow.suppliersku ?? null,
+      barcodes: updatedRow.barcodes ?? [],
+      aliases: updatedRow.aliases ?? [],
+      supplierId: updatedRow.supplierid ?? null,
+      category: updatedRow.category ?? null,
+      tags: updatedRow.tags ?? [],
+      createdAt: updatedRow.created_at,
+      updatedAt: updatedRow.updated_at,
+    };
+
+    return NextResponse.json({ success: true, data: { product } });
+  } catch (error) {
+    console.error('Update product error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Product id is required' },
+        { status: 400 }
+      );
+    }
+
+    const { data: product, error: fetchError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    const result = await deleteProductAndInventory(id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product deleted successfully',
+      deleted: {
+        productId: id,
+        productName: product.name,
+        inventoryRows: result.deletedInventoryCount,
+        transitRows: result.deletedTransitCount,
+      },
+    });
+  } catch (error) {
+    console.error('Delete product error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete product' },
       { status: 500 }
     );
   }

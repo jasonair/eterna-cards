@@ -74,6 +74,8 @@ export default function ViewDataPage() {
   const [saving, setSaving] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [receivingLineId, setReceivingLineId] = useState<string | null>(null);
+  const [receiveQuantities, setReceiveQuantities] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchData();
@@ -450,6 +452,69 @@ export default function ViewDataPage() {
     }));
   };
 
+  const handleReceiveLine = async (line: POLine) => {
+    if (!data) return;
+
+    const lineStatus = getLineReceiveStatus(line);
+    if (lineStatus.remainingQuantity <= 0) {
+      return;
+    }
+
+    const raw = receiveQuantities[line.id] ?? String(lineStatus.remainingQuantity);
+    const quantityToReceive = Number(raw);
+
+    if (!Number.isFinite(quantityToReceive) || quantityToReceive <= 0) {
+      alert('Please enter a valid quantity to receive.');
+      return;
+    }
+
+    if (quantityToReceive > lineStatus.remainingQuantity) {
+      alert(`You can receive at most ${lineStatus.remainingQuantity} units for this line.`);
+      return;
+    }
+
+    const transitRecord = data.transit.find(
+      (t) => t.poLineId === line.id && t.remainingQuantity > 0,
+    );
+
+    if (!transitRecord) {
+      alert('No in-transit quantity available for this line.');
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Mark ${quantityToReceive} unit(s) as received for "${line.description}"? (In transit: ${lineStatus.remainingQuantity})`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setReceivingLineId(line.id);
+      const res = await fetch('/api/inventory/receive-line', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId: transitRecord.productId,
+          poLineId: line.id,
+          quantity: quantityToReceive,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to receive stock');
+      }
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to receive stock');
+    } finally {
+      setReceivingLineId(null);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -713,12 +778,15 @@ export default function ViewDataPage() {
                               Status
                             </th>
                             <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Receive
+                            </th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Qty
                             </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                               Unit Price
                             </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                               Total
                             </th>
                           </tr>
@@ -748,28 +816,62 @@ export default function ViewDataPage() {
                                 </td>
                                 <td className="px-3 py-3 text-sm">
                                   {lineStatus.status === 'received' && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#166534] text-green-100 border border-green-500/60">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#166534] text-green-100 border border-green-500/60 whitespace-nowrap">
                                       Received
                                     </span>
                                   )}
                                   {lineStatus.status === 'partial' && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#78350f] text-amber-100 border border-amber-500/60">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#78350f] text-amber-100 border border-amber-500/60 whitespace-nowrap">
                                       Partially received ({lineStatus.receivedQuantity}/{line.quantity})
                                     </span>
                                   )}
                                   {lineStatus.status === 'not_received' && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#111111] text-gray-300 border border-[#333333]">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#111111] text-gray-300 border border-[#333333] whitespace-nowrap">
                                       Not received
                                     </span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-3 text-sm text-right">
+                                  {lineStatus.remainingQuantity > 0 && (
+                                    <div className="flex items-center justify-end gap-2">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={lineStatus.remainingQuantity}
+                                        value={
+                                          receiveQuantities[line.id] ??
+                                          String(lineStatus.remainingQuantity)
+                                        }
+                                        onChange={(e) =>
+                                          setReceiveQuantities((prev) => ({
+                                            ...prev,
+                                            [line.id]: e.target.value,
+                                          }))
+                                        }
+                                        className="w-16 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReceiveLine(line)}
+                                        disabled={receivingLineId === line.id}
+                                        className="inline-flex items-center px-2.5 py-1 text-[11px] rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] disabled:opacity-50"
+                                      >
+                                        {receivingLineId === line.id
+                                          ? 'Saving...'
+                                          : lineStatus.status === 'not_received'
+                                          ? 'Receive'
+                                          : 'Receive'}
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                                 <td className="px-3 py-3 text-sm text-gray-100 text-right">
                                   {line.quantity}
                                 </td>
-                                <td className="px-3 py-3 text-sm text-gray-100 text-right">
+                                <td className="px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.unitCostExVAT, po.currency)}
                                 </td>
-                                <td className="px-3 py-3 text-sm font-medium text-gray-100 text-right">
+                                <td className="px-3 py-3 text-xs sm:text-sm font-medium text-gray-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.lineTotalExVAT, po.currency)}
                                 </td>
                               </tr>
