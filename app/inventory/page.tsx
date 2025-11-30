@@ -252,7 +252,7 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -544,9 +544,45 @@ export default function InventoryPage() {
                         type="button"
                         onClick={() => handleDeleteProduct(row.product)}
                         disabled={deletingProductId === row.product.id}
-                        className="mt-1 inline-flex items-center justify-center px-3 py-1.5 text-xs rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
+                        className="mt-1 inline-flex items-center justify-center px-2.5 py-1.5 rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
+                        aria-label={deletingProductId === row.product.id ? 'Deleting product' : 'Delete product'}
                       >
-                        {deletingProductId === row.product.id ? 'Deleting...' : 'Delete item'}
+                        {deletingProductId === row.product.id ? (
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                        ) : (
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -555,8 +591,8 @@ export default function InventoryPage() {
             </div>
           ) : (
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#3a3a3a] text-sm">
+              <div>
+                <table className="w-full divide-y divide-[#3a3a3a] text-sm">
                   <thead className="bg-[#1a1a1a]">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -588,7 +624,7 @@ export default function InventoryPage() {
                             <div className="flex flex-col">
                               <a
                                 href={`/inventory/${row.product.id}`}
-                                className="text-gray-100 font-medium hover:text-white truncate"
+                                className="text-gray-100 font-medium hover:text-white"
                               >
                                 {row.product.name}
                               </a>
@@ -607,15 +643,15 @@ export default function InventoryPage() {
                             {row.quantityInTransit}
                           </td>
                           <td className="px-4 py-3 align-top text-right">
-                            <div className="flex flex-col items-end gap-1">
-                              <div className="flex flex-wrap justify-end gap-2">
+                            <div className="flex flex-col items-end gap-2 w-full max-w-xs ml-auto">
+                              <div className="flex flex-wrap items-center justify-end gap-2 w-full">
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setBarcodeProductId(row.product.id);
                                     setBarcodeValue('');
                                   }}
-                                  className="px-2 py-1 text-[11px] rounded-md border border-[#3a3a3a] text-[#ff6b35] hover:bg-[#3a3a3a]"
+                                  className="px-2 py-1 text-[11px] rounded-md border border-[#3a3a3a] text-[#ff6b35] hover:bg-[#3a3a3a] whitespace-nowrap"
                                 >
                                   {row.product.barcodes?.length ? 'Add barcode' : 'Add barcode'}
                                 </button>
@@ -623,29 +659,65 @@ export default function InventoryPage() {
                                   type="button"
                                   onClick={() => handleDeleteProduct(row.product)}
                                   disabled={deletingProductId === row.product.id}
-                                  className="px-2 py-1 text-[11px] rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
+                                  className="px-2.5 py-1 text-[11px] rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
+                                  aria-label={deletingProductId === row.product.id ? 'Deleting product' : 'Delete product'}
                                 >
-                                  {deletingProductId === row.product.id ? 'Deleting...' : 'Delete'}
+                                  {deletingProductId === row.product.id ? (
+                                    <svg
+                                      className="animate-spin h-3.5 w-3.5"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      className="h-3.5 w-3.5"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  )}
                                 </button>
                                 {hasOnHand && (
-                                  <span className="px-2 py-1 text-[10px] rounded-full bg-[#1a3a1a] text-green-300">
+                                  <span className="px-2 py-1 text-[10px] rounded-full bg-[#1a3a1a] text-green-300 whitespace-nowrap">
                                     In stock
                                   </span>
                                 )}
                               </div>
                               {isAddingBarcode && (
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full mt-1">
                                   <input
                                     value={barcodeValue}
                                     onChange={(e) => setBarcodeValue(e.target.value)}
                                     placeholder="Scan or enter barcode"
-                                    className="w-40 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full sm:w-48 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
                                   />
                                   <button
                                     type="button"
                                     onClick={handleAddBarcode}
                                     disabled={barcodeLoading}
-                                    className="px-3 py-1.5 text-xs rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] disabled:opacity-50"
+                                    className="px-3 py-1.5 text-xs rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] disabled:opacity-50 whitespace-nowrap"
                                   >
                                     {barcodeLoading ? 'Saving...' : 'Save'}
                                   </button>
@@ -655,7 +727,7 @@ export default function InventoryPage() {
                                       setBarcodeProductId(null);
                                       setBarcodeValue('');
                                     }}
-                                    className="px-2 py-1.5 text-xs rounded-md bg-transparent text-gray-300 hover:text-white"
+                                    className="px-2 py-1.5 text-xs rounded-md bg-transparent text-gray-300 hover:text-white whitespace-nowrap"
                                   >
                                     Cancel
                                   </button>

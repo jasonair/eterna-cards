@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import PurchaseOrderForm from '../../../components/PurchaseOrderForm';
 
 interface FileGroup {
   id: string;
@@ -59,6 +60,11 @@ interface GroupResult {
 }
 
 export default function ImportPage() {
+  const searchParams = useSearchParams();
+  const initialModeParam = searchParams.get('mode');
+  const initialMode = (initialModeParam === 'manual' ? 'manual' : 'import') as 'import' | 'manual';
+
+  const [mode, setMode] = useState<'import' | 'manual'>(initialMode);
   const [fileGroups, setFileGroups] = useState<FileGroup[]>([]);
   const [groupResults, setGroupResults] = useState<GroupResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,6 +76,9 @@ export default function ImportPage() {
   const [editedData, setEditedData] = useState<{ [key: number]: ExtractedData }>({});
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
   const [dismissedDuplicates, setDismissedDuplicates] = useState<Set<string>>(new Set());
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualFormKey, setManualFormKey] = useState(0);
   const router = useRouter();
 
   const navigateToView = () => {
@@ -287,6 +296,47 @@ export default function ImportPage() {
       alert(err instanceof Error ? err.message : 'Failed to save purchase order');
     } finally {
       setSavingIndex(null);
+    }
+  };
+
+  const handleManualSubmit = async (data: any) => {
+    setManualError(null);
+
+    if (!data?.supplier?.name) {
+      setManualError('Supplier name is required');
+      return;
+    }
+
+    if (!data.poLines || data.poLines.length === 0) {
+      setManualError('At least one line item is required');
+      return;
+    }
+
+    setManualSaving(true);
+
+    try {
+      const response = await fetch('/api/purchasing/po/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save purchase order');
+      }
+
+      const supplierName = data.supplier.name;
+      setSuccessMessage(`Purchase order for ${supplierName} saved successfully!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      setManualFormKey(prev => prev + 1);
+    } catch (err) {
+      setManualError(err instanceof Error ? err.message : 'Failed to save purchase order');
+    } finally {
+      setManualSaving(false);
     }
   };
 
@@ -548,20 +598,47 @@ export default function ImportPage() {
               💡 Tip: Drag files between groups to merge multiple pages into one purchase order
             </p>
           </div>
-          <button
-            onClick={navigateToView}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            View All Purchase Orders
-          </button>
+          <div className="flex flex-col items-end gap-3">
+            <div className="inline-flex items-center rounded-lg border border-[#3a3a3a] bg-[#141414] p-1">
+              <button
+                type="button"
+                onClick={() => setMode('import')}
+                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+                  mode === 'import'
+                    ? 'bg-[#ff6b35] text-white shadow-md'
+                    : 'text-gray-300 hover:text-gray-100 hover:bg-[#242424]'
+                }`}
+              >
+                Import from invoice
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('manual')}
+                className={`ml-1 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+                  mode === 'manual'
+                    ? 'bg-[#ff6b35] text-white shadow-md'
+                    : 'text-gray-300 hover:text-gray-100 hover:bg-[#242424]'
+                }`}
+              >
+                Manual entry
+              </button>
+            </div>
+            <button
+              onClick={navigateToView}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View All Purchase Orders
+            </button>
+          </div>
         </div>
-
-        {/* Upload Form */}
-        <div className="bg-[#2a2a2a] rounded-lg shadow-md p-6 mb-6 border border-[#3a3a3a]">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {mode === 'import' && (
+          <>
+            {/* Upload Form */}
+            <div className="bg-[#2a2a2a] rounded-lg shadow-md p-6 mb-6 border border-[#3a3a3a]">
+              <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-3">
                 Upload Invoice Files (PNG, JPG, or PDF)
@@ -1178,6 +1255,74 @@ export default function ImportPage() {
               </div>
               );
             })}
+          </div>
+        )}
+          </>
+        )}
+
+        {mode === 'manual' && (
+          <div className="bg-[#2a2a2a] rounded-lg shadow-md p-6 mb-6 border border-[#3a3a3a]">
+            <h2 className="text-xl font-semibold text-gray-100 mb-2">
+              Manual Purchase Order Entry
+            </h2>
+            <p className="text-sm text-gray-300 mb-4">
+              Enter purchase order details manually when you do not have an invoice file to upload.
+            </p>
+            {successMessage && (
+              <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-green-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-sm font-medium text-green-800">Success</h3>
+                    <p className="text-sm text-green-700 mt-1">{successMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => setSuccessMessage(null)}
+                    className="flex-shrink-0 ml-3 text-green-400 hover:text-green-600"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            <PurchaseOrderForm
+              key={manualFormKey}
+              initialData={{
+                supplier: {},
+                purchaseOrder: {},
+                poLines: [
+                  {
+                    description: '',
+                    supplierSku: '',
+                    quantity: 1,
+                    unitCostExVAT: 0,
+                    lineTotalExVAT: 0,
+                  },
+                ],
+                totals: {},
+              }}
+              onSubmit={handleManualSubmit}
+              title="Purchase order details"
+              description="Fill in the supplier, invoice, and line item details. All prices should be entered in GBP."
+              submitButtonText="Save Purchase Order"
+              loading={manualSaving}
+              error={manualError || undefined}
+            />
           </div>
         )}
       </div>

@@ -61,35 +61,6 @@ const mainNav: NavItem[] = [
     ),
   },
   {
-    href: '/purchasing/create',
-    label: 'Create PO',
-    icon: (
-      <svg
-        className="w-5 h-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect
-          x="4"
-          y="4"
-          width="16"
-          height="16"
-          rx="2"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <path
-          d="M12 8v8M8 12h8"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
     href: '/inventory',
     label: 'Inventory',
     icon: (
@@ -211,21 +182,27 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden sm:flex flex-col w-16 lg:w-20 bg-[#141414] border-r border-[#2a2a2a] text-gray-400">
+    <aside className="hidden sm:flex flex-col w-48 lg:w-56 bg-[#141414] border-r border-[#2a2a2a] text-gray-400">
       <div className="flex flex-col items-center justify-between flex-1 py-4">
         {/* Top: logo + main navigation */}
-        <div className="flex flex-col items-center gap-4 w-full">
-          <div className="h-10 w-10 rounded-2xl bg-[#ff6b35] flex items-center justify-center text-white text-xl font-bold shadow-lg">
-            N
+        <div className="flex flex-col items-start gap-4 w-full">
+          <div className="w-full flex justify-center">
+            <div className="h-16 w-16 rounded-full bg-[#ff6b35] overflow-hidden flex items-center justify-center shadow-lg">
+              <img
+                src="/eterna-cards-logo-2.jpg"
+                alt="Profile"
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
-          <nav className="flex flex-col items-center gap-2 mt-2 w-full">
+          <nav className="flex flex-col items-start gap-2 mt-2 w-full">
             {mainNav.map((item) => {
               const active = isActivePath(pathname, item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="w-full flex items-center justify-center"
+                  className="w-full flex items-center justify-start gap-2 px-4"
                 >
                   <div
                     className={`flex items-center justify-center rounded-xl w-10 h-10 transition-colors ${
@@ -237,6 +214,13 @@ export default function Sidebar() {
                     <span className="sr-only">{item.label}</span>
                     {item.icon}
                   </div>
+                  <span
+                    className={`text-sm font-semibold tracking-tight whitespace-nowrap ${
+                      active ? 'text-gray-100' : 'text-gray-500'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}

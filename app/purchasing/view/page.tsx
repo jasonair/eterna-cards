@@ -556,7 +556,7 @@ export default function ViewDataPage() {
           </div>
           <div className="flex gap-3">
             <a
-              href="/purchasing/create"
+              href="/purchasing/import?mode=manual"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -778,7 +778,6 @@ export default function ViewDataPage() {
                               Status
                             </th>
                             <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Receive
                             </th>
                             <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Qty
