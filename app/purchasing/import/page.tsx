@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { Suspense, useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PurchaseOrderForm from '../../../components/PurchaseOrderForm';
 
@@ -59,7 +59,7 @@ interface GroupResult {
   duplicatesChecked?: boolean;
 }
 
-export default function ImportPage() {
+function ImportPageContent() {
   const searchParams = useSearchParams();
   const initialModeParam = searchParams.get('mode');
   const initialMode = (initialModeParam === 'manual' ? 'manual' : 'import') as 'import' | 'manual';
@@ -583,8 +583,8 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="min-h-screen bg-[#1a1a1a] py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
         {/* Navigation Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
@@ -1327,5 +1327,19 @@ export default function ImportPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ImportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center text-gray-100">
+          Loading purchase order import...
+        </div>
+      }
+    >
+      <ImportPageContent />
+    </Suspense>
   );
 }
