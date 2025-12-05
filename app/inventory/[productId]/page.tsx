@@ -24,6 +24,7 @@ interface Product {
   supplierId: string | null;
   category: string | null;
   tags: string[];
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -104,12 +105,18 @@ export default function ProductHistoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingPrices, setEditingPrices] = useState(false);
+  const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [savingPrices, setSavingPrices] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     sku: '',
     category: '',
     barcodes: '',
     tags: '',
+    aliases: '',
+    imageUrl: '',
   });
 
   useEffect(() => {
@@ -143,7 +150,25 @@ export default function ProductHistoryPage() {
         category: data.product.category || '',
         barcodes: (data.product.barcodes || []).join(', '),
         tags: (data.product.tags || []).join(', '),
+        aliases: (data.product.aliases || []).join(', '),
+        imageUrl: data.product.imageUrl || '',
       });
+    }
+
+    if (data?.transit) {
+      const initialPrices: Record<string, string> = {};
+      data.transit.forEach((row) => {
+        if (row.poLine) {
+          const rawUnit =
+            row.poLine.unitCostExVAT ??
+            row.transit.unitCostGBP ??
+            0;
+          initialPrices[row.poLine.id] = String(rawUnit);
+        }
+      });
+      setPriceEdits(initialPrices);
+    } else {
+      setPriceEdits({});
     }
   }, [data]);
 
@@ -170,6 +195,13 @@ export default function ProductHistoryPage() {
     }));
   };
 
+  const handlePriceChange = (lineId: string, value: string) => {
+    setPriceEdits((prev) => ({
+      ...prev,
+      [lineId]: value,
+    }));
+  };
+
   const handleSaveProduct = async () => {
     if (!data) return;
 
@@ -192,6 +224,8 @@ export default function ProductHistoryPage() {
         category: editForm.category.trim() || null,
         barcodes: normalizeList(editForm.barcodes),
         tags: normalizeList(editForm.tags),
+        aliases: normalizeList(editForm.aliases),
+        imageUrl: editForm.imageUrl.trim() || null,
       };
 
       const res = await fetch(
@@ -215,6 +249,81 @@ export default function ProductHistoryPage() {
       setError(err instanceof Error ? err.message : 'Failed to update product');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSavePrices = async () => {
+    if (!data) return;
+
+    try {
+      setSavingPrices(true);
+      setPriceError(null);
+
+      const updates: {
+        id: string;
+        unitCostExVAT: number;
+        lineTotalExVAT: number;
+      }[] = [];
+
+      data.transit.forEach((row) => {
+        if (!row.poLine) return;
+        const line = row.poLine;
+        const raw = priceEdits[line.id];
+        if (raw === undefined) return;
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          throw new Error('Unit prices must be non-negative numbers');
+        }
+        if (parsed === line.unitCostExVAT) return;
+        const quantity = line.quantity ?? row.transit.quantity ?? 0;
+        const lineTotal = parsed * quantity;
+        updates.push({
+          id: line.id,
+          unitCostExVAT: parsed,
+          lineTotalExVAT: lineTotal,
+        });
+      });
+
+      for (const update of updates) {
+        const res = await fetch(
+          `/api/purchasing/po/lines?id=${encodeURIComponent(update.id)}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              unitCostExVAT: update.unitCostExVAT,
+              lineTotalExVAT: update.lineTotalExVAT,
+            }),
+          },
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || (json && (json as any).success === false)) {
+          throw new Error(
+            ((json as any) && (json as any).error) || 'Failed to update line item',
+          );
+        }
+      }
+
+      if (updates.length > 0) {
+        const res = await fetch(
+          `/api/inventory/product?id=${encodeURIComponent(productId)}`,
+        );
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(
+            json.error || 'Failed to reload product after saving prices',
+          );
+        }
+        setData(json.data);
+      }
+
+      setEditingPrices(false);
+    } catch (err) {
+      setPriceError(
+        err instanceof Error ? err.message : 'Failed to update prices',
+      );
+    } finally {
+      setSavingPrices(false);
     }
   };
 
@@ -256,201 +365,331 @@ export default function ProductHistoryPage() {
     0
   );
 
+  const initials = product.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
+  const totalValue = (inventory?.quantityOnHand || 0) * (inventory?.averageCostGBP || 0);
+  const inTransitQty = transit.reduce((sum, t) => sum + (t.transit.remainingQuantity || 0), 0);
+
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto space-y-5">
+        {/* Header row - Sortly style */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="min-w-0">
             <button
               type="button"
               onClick={() => router.back()}
-              className="text-xs text-[#ff6b35] hover:text-[#ff8c42] mb-2"
+              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#ff6b35] mb-2"
             >
-              ← Back to inventory
+              <span>←</span>
+              <span>Back to inventory</span>
             </button>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 truncate">
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-100 uppercase tracking-tight break-words">
               {product.name}
             </h1>
-            <p className="text-xs text-gray-400 mt-1 truncate">
-              {supplier?.name || 'Unknown supplier'}
+            <p className="text-xs text-gray-500 mt-1">
+              Product ID: <span className="font-mono">{product.id.slice(0, 8)}...</span> · Updated {formatDate(product.updatedAt)}
             </p>
           </div>
-          <div className="hidden sm:flex flex-col items-end text-xs text-gray-400">
-            <span>Product ID: {product.id}</span>
-            <span>Created: {formatDate(product.createdAt)}</span>
-          </div>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3">
-            <p className="text-xs text-gray-400">On hand</p>
-            <p className="text-xl font-semibold text-gray-100 mt-1">
-              {inventory?.quantityOnHand || 0}
-            </p>
-          </div>
-          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3">
-            <p className="text-xs text-gray-400">In transit</p>
-            <p className="text-xl font-semibold text-gray-100 mt-1">
-              {transit.reduce((sum, t) => sum + (t.transit.remainingQuantity || 0), 0)}
-            </p>
-          </div>
-          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3">
-            <p className="text-xs text-gray-400">Avg cost</p>
-            <p className="text-sm font-semibold text-gray-100 mt-1">
-              {formatCurrency(inventory?.averageCostGBP)}
-            </p>
-          </div>
-          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3">
-            <p className="text-xs text-gray-400">Ordered / Received</p>
-            <p className="text-sm font-semibold text-gray-100 mt-1">
-              {totalReceived}/{totalOrdered}
-            </p>
-          </div>
-        </div>
-
-        {/* Identity section */}
-        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 text-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-wide text-gray-400">Identity</p>
-            <div className="flex items-center gap-2">
-              {editing ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(false);
-                      if (data?.product) {
-                        setEditForm({
-                          name: data.product.name || '',
-                          sku: data.product.primarySku || data.product.supplierSku || '',
-                          category: data.product.category || '',
-                          barcodes: (data.product.barcodes || []).join(', '),
-                          tags: (data.product.tags || []).join(', '),
-                        });
-                      }
-                    }}
-                    disabled={saving}
-                    className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a] disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveProduct}
-                    disabled={saving}
-                    className="px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] hover:bg-[#ff8c42] disabled:opacity-50"
-                  >
-                    {saving ? 'Saving…' : 'Save'}
-                  </button>
-                </>
-              ) : (
+          <div className="flex items-center gap-2">
+            {editing ? (
+              <>
                 <button
                   type="button"
-                  onClick={() => setEditing(true)}
-                  className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a]"
+                  onClick={() => {
+                    setEditing(false);
+                    if (data?.product) {
+                      setEditForm({
+                        name: data.product.name || '',
+                        sku: data.product.primarySku || data.product.supplierSku || '',
+                        category: data.product.category || '',
+                        barcodes: (data.product.barcodes || []).join(', '),
+                        tags: (data.product.tags || []).join(', '),
+                        aliases: (data.product.aliases || []).join(', '),
+                        imageUrl: data.product.imageUrl || '',
+                      });
+                    }
+                  }}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-md border border-[#3a3a3a] text-sm text-gray-300 hover:bg-[#3a3a3a] disabled:opacity-50"
                 >
-                  Edit product
+                  Cancel
                 </button>
+                <button
+                  type="button"
+                  onClick={handleSaveProduct}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-md bg-[#ff6b35] text-white text-sm font-medium hover:bg-[#ff8c42] disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#ff6b35] text-white text-sm font-medium hover:bg-[#ff8c42]"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                EDIT
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Two-column body - Sortly style */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Left column: Product Information with image */}
+          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5 flex flex-col">
+            <h2 className="text-sm font-semibold text-gray-100 mb-4">Product Information</h2>
+            
+            {/* Large product image - Sortly style */}
+            <div className="flex-1 flex flex-col justify-center mb-4">
+              <div className="flex justify-center h-full">
+                <div className="relative w-full h-full min-h-[200px] sm:min-h-[320px] rounded-lg overflow-hidden border border-[#3a3a3a] bg-[#1a1a1a]">
+                  {editing ? (
+                    editForm.imageUrl.trim() ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={editForm.imageUrl}
+                        alt={editForm.name || product.name || 'Product image'}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-4xl font-bold text-gray-300 uppercase">
+                        {initials || 'PR'}
+                      </div>
+                    )
+                  ) : product.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name || 'Product image'}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-4xl font-bold text-gray-300 uppercase">
+                      {initials || 'PR'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Image URL input when editing */}
+            {editing && (
+              <div className="mb-4">
+                <label className="block text-xs text-gray-400 mb-1">Image URL</label>
+                <input
+                  value={editForm.imageUrl}
+                  onChange={(e) => handleEditFieldChange('imageUrl', e.target.value)}
+                  placeholder="Paste image URL (e.g. from Supabase storage)"
+                  className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                />
+              </div>
+            )}
+
+            {/* Notes / Aliases */}
+            <div className="border-t border-[#3a3a3a] pt-4 mt-auto">
+              <p className="text-xs text-gray-400 mb-2">Notes</p>
+              {editing ? (
+                <input
+                  value={editForm.aliases}
+                  onChange={(e) => handleEditFieldChange('aliases', e.target.value)}
+                  placeholder="Alternative names, notes, etc."
+                  className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                />
+              ) : (
+                <p className="text-sm text-gray-300">
+                  {product.aliases && product.aliases.length ? product.aliases.join(' / ') : '-'}
+                </p>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <p className="text-gray-400">Name</p>
-              {editing ? (
-                <input
-                  value={editForm.name}
-                  onChange={(e) => handleEditFieldChange('name', e.target.value)}
-                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-                />
-              ) : (
-                <p className="text-gray-100">{product.name}</p>
-              )}
+          {/* Right column: Metrics 2x2 + Details */}
+          <div className="space-y-5">
+            {/* Metrics 2x2 grid */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">Quantity</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-100">{inventory?.quantityOnHand || 0}</p>
+              </div>
+              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">In Transit</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-100">{inTransitQty}</p>
+              </div>
+              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">Price/unit</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-100">£{(inventory?.averageCostGBP || 0).toFixed(2)}</p>
+              </div>
+              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">Total value</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-100">£{totalValue.toFixed(2)}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-gray-400">SKU</p>
-              {editing ? (
-                <input
-                  value={editForm.sku}
-                  onChange={(e) => handleEditFieldChange('sku', e.target.value)}
-                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
-                />
-              ) : (
-                <p className="text-gray-100 font-mono">
-                  {product.primarySku || product.supplierSku || '-'}
-                </p>
-              )}
+
+            {/* Product Details card */}
+            <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5">
+              <h2 className="text-sm font-semibold text-gray-100 mb-4">Product Details</h2>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Name</p>
+                  {editing ? (
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => handleEditFieldChange('name', e.target.value)}
+                      className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-100">{product.name}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">SKU</p>
+                  {editing ? (
+                    <input
+                      value={editForm.sku}
+                      onChange={(e) => handleEditFieldChange('sku', e.target.value)}
+                      className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-100 font-mono">
+                      {product.primarySku || product.supplierSku || '-'}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Category</p>
+                  {editing ? (
+                    <input
+                      value={editForm.category}
+                      onChange={(e) => handleEditFieldChange('category', e.target.value)}
+                      className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-100">{product.category || '-'}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Supplier</p>
+                  <p className="text-sm text-gray-100">{supplier?.name || '-'}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-gray-400">Barcodes</p>
-              {editing ? (
-                <input
-                  value={editForm.barcodes}
-                  onChange={(e) => handleEditFieldChange('barcodes', e.target.value)}
-                  placeholder="Comma-separated"
-                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
-                />
-              ) : (
-                <p className="text-gray-100 font-mono truncate">
-                  {product.barcodes && product.barcodes.length
-                    ? product.barcodes.join(', ')
-                    : '-'}
-                </p>
-              )}
-            </div>
-            <div>
-              <p className="text-gray-400">Category</p>
-              {editing ? (
-                <input
-                  value={editForm.category}
-                  onChange={(e) => handleEditFieldChange('category', e.target.value)}
-                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-                />
-              ) : (
-                <p className="text-gray-100">{product.category || '-'}</p>
-              )}
-            </div>
-            <div>
-              <p className="text-gray-400">Tags</p>
-              {editing ? (
-                <input
-                  value={editForm.tags}
-                  onChange={(e) => handleEditFieldChange('tags', e.target.value)}
-                  placeholder="Comma-separated"
-                  className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-                />
-              ) : (
-                <p className="text-gray-100 truncate">
-                  {product.tags && product.tags.length ? product.tags.join(', ') : '-'}
-                </p>
-              )}
+
+            {/* QR & Barcode card */}
+            <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5">
+              <h2 className="text-sm font-semibold text-gray-100 mb-4">QR & Barcode</h2>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Barcodes</p>
+                {editing ? (
+                  <input
+                    value={editForm.barcodes}
+                    onChange={(e) => handleEditFieldChange('barcodes', e.target.value)}
+                    placeholder="Comma-separated barcodes"
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-100 font-mono">
+                    {product.barcodes && product.barcodes.length
+                      ? product.barcodes.join(', ')
+                      : '-'}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Transit & invoice history */}
-        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4">
-          <h2 className="text-sm font-semibold text-gray-100 mb-3">
-            Purchase orders & shipments
-          </h2>
+        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-5 md:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-sm sm:text-base font-semibold text-gray-100">
+              Purchase orders & shipments
+            </h2>
+            {transit.length > 0 && (
+              <div className="flex items-center gap-2">
+                {editingPrices ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPrices(false);
+                        setPriceError(null);
+                        if (data?.transit) {
+                          const reset: Record<string, string> = {};
+                          data.transit.forEach((row) => {
+                            if (row.poLine) {
+                              const rawUnit =
+                                row.poLine.unitCostExVAT ??
+                                row.transit.unitCostGBP ??
+                                0;
+                              reset[row.poLine.id] = String(rawUnit);
+                            }
+                          });
+                          setPriceEdits(reset);
+                        }
+                      }}
+                      disabled={savingPrices}
+                      className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a] disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSavePrices}
+                      disabled={savingPrices}
+                      className="px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] hover:bg-[#ff8c42] disabled:opacity-50"
+                    >
+                      {savingPrices ? 'Saving…' : 'Save prices'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPrices(true);
+                      setPriceError(null);
+                    }}
+                    className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a]"
+                  >
+                    Edit prices
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {priceError && (
+            <div className="mb-3 rounded-md border border-red-500 bg-[#3a2a2a] px-3 py-2 text-[11px] text-red-200">
+              {priceError}
+            </div>
+          )}
 
           {transit.length === 0 ? (
-            <p className="text-xs text-gray-400">No shipments recorded for this product yet.</p>
+            <p className="text-xs sm:text-sm text-gray-400">No shipments recorded for this product yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-xs divide-y divide-[#3a3a3a]">
+              <table className="min-w-full text-[11px] sm:text-sm divide-y divide-[#3a3a3a]">
                 <thead className="bg-[#1a1a1a]">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-gray-400">PO / Invoice</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-400">Description</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-400">Ordered</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-400">Received</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-400">Remaining</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-400">Unit price</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-400">Line total</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-400">Status</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 whitespace-nowrap">PO / Invoice</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 hidden sm:table-cell">Description</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Qty</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Rcvd</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Left</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Unit £</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Total</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#3a3a3a]">
@@ -460,27 +699,47 @@ export default function ProductHistoryPage() {
                     const received = ordered - remaining;
                     const po = row.purchaseOrder;
                     const invoice = row.invoice;
+                    const poLineId = row.poLine?.id || null;
+                    const defaultUnit =
+                      row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP ?? 0;
+                    const editedUnitRaw =
+                      poLineId && priceEdits[poLineId] !== undefined
+                        ? priceEdits[poLineId]
+                        : String(defaultUnit);
+                    const parsedEditedUnit = Number(editedUnitRaw);
+                    const effectiveUnit =
+                      editingPrices && poLineId &&
+                      Number.isFinite(parsedEditedUnit) &&
+                      parsedEditedUnit >= 0
+                        ? parsedEditedUnit
+                        : defaultUnit;
+                    const effectiveLineTotal =
+                      editingPrices && poLineId
+                        ? effectiveUnit * ordered
+                        : row.poLine?.lineTotalExVAT ??
+                          (row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP) *
+                            ordered;
 
                     return (
                       <tr key={row.transit.id} className="hover:bg-[#1a1a1a]">
-                        <td className="px-3 py-2 align-top">
+                        <td className="px-2 sm:px-3 py-2 align-top">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-gray-100 font-medium">
+                            <span className="text-gray-100 font-medium text-[11px] sm:text-xs">
                               {po?.invoiceNumber || 'PO ' + (po?.id ?? '').slice(0, 8)}
                             </span>
                             {invoice && (
-                              <span className="text-gray-400">
+                              <span className="text-gray-400 text-[10px] sm:text-xs hidden sm:block">
                                 Inv: {invoice.invoiceNumber || '-'}
                               </span>
                             )}
                             {po && (
-                              <span className="text-gray-500">
-                                Date: {formatDate(po.invoiceDate || po.createdAt)}
+                              <span className="text-gray-500 text-[10px] sm:text-xs">
+                                {formatDate(po.invoiceDate || po.createdAt)}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2 align-top max-w-xs">
+                        <td className="px-2 sm:px-3 py-2 align-top max-w-xs hidden sm:table-cell">
                           <p className="text-gray-100 truncate">
                             {row.poLine?.description || '-'}
                           </p>
@@ -490,25 +749,35 @@ export default function ProductHistoryPage() {
                             </p>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right align-top text-gray-100">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">
                           {ordered}
                         </td>
-                        <td className="px-3 py-2 text-right align-top text-gray-100">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100 hidden sm:table-cell">
                           {received}
                         </td>
-                        <td className="px-3 py-2 text-right align-top text-gray-100">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">
                           {remaining}
                         </td>
-                        <td className="px-3 py-2 text-right align-top text-gray-100">
-                          {formatCurrency(row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP)}
-                        </td>
-                        <td className="px-3 py-2 text-right align-top text-gray-100">
-                          {formatCurrency(
-                            row.poLine?.lineTotalExVAT ??
-                              (row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP) * ordered,
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">
+                          {editingPrices && row.poLine ? (
+                            <input
+                              type="number"
+                              value={editedUnitRaw}
+                              onChange={(e) =>
+                                handlePriceChange(row.poLine!.id, e.target.value)
+                              }
+                              min="0"
+                              step="0.01"
+                              className="w-20 rounded-md border border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1 text-right text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                            />
+                          ) : (
+                            formatCurrency(defaultUnit)
                           )}
                         </td>
-                        <td className="px-3 py-2 align-top">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100 hidden sm:table-cell">
+                          {formatCurrency(effectiveLineTotal)}
+                        </td>
+                        <td className="px-2 sm:px-3 py-2 align-top">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
                               row.transit.status === 'received'

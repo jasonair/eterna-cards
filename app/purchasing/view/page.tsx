@@ -62,7 +62,6 @@ export default function ViewDataPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [deletingSupplier, setDeletingSupplier] = useState<string | null>(null);
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editFormData, setEditFormData] = useState({
     invoiceNumber: '',
@@ -75,6 +74,7 @@ export default function ViewDataPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [receivingLineId, setReceivingLineId] = useState<string | null>(null);
+  const [receivingPOId, setReceivingPOId] = useState<string | null>(null);
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -141,6 +141,22 @@ export default function ViewDataPage() {
     }
 
     return { status, receivedQuantity, remainingQuantity: totalRemaining };
+  };
+
+  const getPOReceiveSummary = (purchaseOrderId: string) => {
+    const lines = getPOLines(purchaseOrderId);
+    let totalOrdered = 0;
+    let totalReceived = 0;
+    let totalRemaining = 0;
+
+    for (const line of lines) {
+      const status = getLineReceiveStatus(line);
+      totalOrdered += line.quantity;
+      totalReceived += status.receivedQuantity;
+      totalRemaining += status.remainingQuantity;
+    }
+
+    return { totalOrdered, totalReceived, totalRemaining };
   };
 
   const formatDate = (dateString: string | null) => {
@@ -296,35 +312,6 @@ export default function ViewDataPage() {
     }
   };
 
-  const handleDeleteSupplier = async (supplierId: string, supplierName: string) => {
-    const poCount = data?.purchaseOrders.filter(po => po.supplierId === supplierId).length || 0;
-    const message = poCount > 0
-      ? `Are you sure you want to delete "${supplierName}"? This will also delete ${poCount} purchase order(s) and all associated line items.`
-      : `Are you sure you want to delete "${supplierName}"?`;
-
-    if (!confirm(message)) {
-      return;
-    }
-
-    setDeletingSupplier(supplierId);
-    try {
-      const response = await fetch(`/api/suppliers/delete?id=${supplierId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete supplier');
-      }
-
-      // Refresh data after successful deletion
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete supplier');
-    } finally {
-      setDeletingSupplier(null);
-    }
-  };
-
   const handleEdit = (po: PurchaseOrder) => {
     const poLines = data?.poLines.filter(line => line.purchaseOrderId === po.id) || [];
     setEditingPO(po);
@@ -452,6 +439,75 @@ export default function ViewDataPage() {
     }));
   };
 
+  const handleReceiveFullPO = async (po: PurchaseOrder) => {
+    if (!data) return;
+
+    const lines = getPOLines(po.id);
+    const linesWithRemaining = lines.filter((line) => {
+      const status = getLineReceiveStatus(line);
+      return status.remainingQuantity > 0;
+    });
+
+    if (linesWithRemaining.length === 0) {
+      alert('This purchase order is already fully received.');
+      return;
+    }
+
+    const totalRemaining = linesWithRemaining.reduce((sum, line) => {
+      const status = getLineReceiveStatus(line);
+      return sum + status.remainingQuantity;
+    }, 0);
+
+    if (
+      !window.confirm(
+        `Mark all remaining quantities as received for this purchase order? This will receive ${totalRemaining} unit(s) across ${linesWithRemaining.length} line(s).`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setReceivingPOId(po.id);
+
+      for (const line of linesWithRemaining) {
+        const lineStatus = getLineReceiveStatus(line);
+        if (lineStatus.remainingQuantity <= 0) {
+          continue;
+        }
+
+        const transitRecord = data.transit.find(
+          (t) => t.poLineId === line.id && t.remainingQuantity > 0,
+        );
+
+        if (!transitRecord) {
+          continue;
+        }
+
+        const res = await fetch('/api/inventory/receive-line', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            productId: transitRecord.productId,
+            poLineId: line.id,
+            quantity: lineStatus.remainingQuantity,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Failed to receive stock for one or more lines');
+        }
+      }
+
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to receive stock for purchase order');
+    } finally {
+      setReceivingPOId(null);
+    }
+  };
+
   const handleReceiveLine = async (line: POLine) => {
     if (!data) return;
 
@@ -542,41 +598,43 @@ export default function ViewDataPage() {
   const isEmpty = !data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0);
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-12 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-[1600px] mx-auto">
         {/* Navigation Header */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-100 mb-2">
-              Purchase Orders Database
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 mb-2">
+              Purchase Orders
             </h1>
-            <p className="text-gray-300">
+            <p className="text-sm sm:text-base text-gray-300">
               View all imported invoices and suppliers
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <a
               href="/purchasing/import?mode=manual"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Create New PO
+              <span className="hidden sm:inline">Create New PO</span>
+              <span className="sm:hidden">New</span>
             </a>
             <a
               href="/purchasing/import"
-              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-[#3a3a3a] text-xs sm:text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Import from Invoice
+              <span className="hidden sm:inline">Import from Invoice</span>
+              <span className="sm:hidden">Import</span>
             </a>
             <button
               onClick={handleExportClick}
               disabled={!data || data.purchaseOrders.length === 0}
-              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hidden sm:inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -585,56 +643,56 @@ export default function ViewDataPage() {
             </button>
             <button
               onClick={fetchData}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-6 border border-[#3a3a3a]">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-[#2a2a2a] rounded-lg shadow p-3 sm:p-6 border border-[#3a3a3a]">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="hidden sm:block flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
                 <svg className="h-6 w-6 text-[#ff6b35]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Suppliers</p>
-                <p className="text-2xl font-bold text-gray-100">{data?.suppliers.length || 0}</p>
+              <div className="sm:ml-4">
+                <p className="text-[10px] sm:text-sm font-medium text-gray-400">Suppliers</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-100">{data?.suppliers.length || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-6 border border-[#3a3a3a]">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
+          <div className="bg-[#2a2a2a] rounded-lg shadow p-3 sm:p-6 border border-[#3a3a3a]">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="hidden sm:block flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
                 <svg className="h-6 w-6 text-[#ff6b35]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Purchase Orders</p>
-                <p className="text-2xl font-bold text-gray-100">{data?.purchaseOrders.length || 0}</p>
+              <div className="sm:ml-4">
+                <p className="text-[10px] sm:text-sm font-medium text-gray-400">Orders</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-100">{data?.purchaseOrders.length || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-6 border border-[#3a3a3a]">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
+          <div className="bg-[#2a2a2a] rounded-lg shadow p-3 sm:p-6 border border-[#3a3a3a]">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="hidden sm:block flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
                 <svg className="h-6 w-6 text-[#ff6b35]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Line Items</p>
-                <p className="text-2xl font-bold text-gray-100">{data?.poLines.length || 0}</p>
+              <div className="sm:ml-4">
+                <p className="text-[10px] sm:text-sm font-medium text-gray-400">Lines</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-100">{data?.poLines.length || 0}</p>
               </div>
             </div>
           </div>
@@ -679,6 +737,7 @@ export default function ViewDataPage() {
                   {pos.map((po) => {
                     const lines = getPOLines(po.id);
                     const totalAmount = lines.reduce((sum, line) => sum + line.lineTotalExVAT, 0);
+                    const receiveSummary = getPOReceiveSummary(po.id);
 
                     return (
                       <div 
@@ -686,24 +745,24 @@ export default function ViewDataPage() {
                         className="bg-[#2a2a2a] rounded-lg shadow overflow-hidden transition-all border border-[#3a3a3a]"
                       >
                   {/* PO Header */}
-                  <div className="bg-gradient-to-r from-[#ff6b35] to-[#ff8c42] px-6 py-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white">
+                  <div className="bg-gradient-to-r from-[#ff6b35] to-[#ff8c42] px-3 sm:px-6 py-3 sm:py-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-xl font-bold text-white truncate">
                           {po.invoiceNumber}
                         </h3>
-                        <p className="text-white/80 text-sm mt-1">
+                        <p className="text-white/80 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">
                           {getSupplierName(po.supplierId)}
                         </p>
                       </div>
-                      <div className="text-right flex items-start gap-4">
-                        <div>
-                          <p className="text-2xl font-bold text-white">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
+                        <div className="text-left sm:text-right">
+                          <p className="text-lg sm:text-2xl font-bold text-white">
                             {formatCurrency(totalAmount, po.currency)}
                           </p>
-                          <p className="text-white/80 text-sm">ex VAT (GBP)</p>
+                          <p className="text-white/80 text-[10px] sm:text-sm">ex VAT (GBP)</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1 sm:gap-2">
                           <button
                             onClick={() => handleEdit(po)}
                             className="bg-[#3a3a3a] hover:bg-[#4a4a4a] text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -736,8 +795,8 @@ export default function ViewDataPage() {
                   </div>
 
                   {/* PO Details */}
-                  <div className="px-6 py-4 bg-[#1a1a1a] border-b border-[#3a3a3a]">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#1a1a1a] border-b border-[#3a3a3a]">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                       <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Invoice Date</p>
                         <p className="text-sm font-medium text-gray-100 mt-1">
@@ -762,30 +821,30 @@ export default function ViewDataPage() {
                   </div>
 
                   {/* Line Items */}
-                  <div className="px-6 py-4">
-                    <h4 className="text-sm font-semibold text-gray-100 mb-3">Line Items</h4>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-[#3a3a3a]">
+                  <div className="px-3 sm:px-6 py-3 sm:py-4">
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-100 mb-2 sm:mb-3">Line Items</h4>
+                    <div className="overflow-x-auto -mx-3 sm:mx-0">
+                      <table className="min-w-full divide-y divide-[#3a3a3a] text-xs sm:text-sm">
                         <thead>
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wider">
                               Description
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="hidden sm:table-cell px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                               SKU
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wider">
                               Status
                             </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             </th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Qty
                             </th>
-                            <th className="px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                              Unit Price
+                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                              Unit
                             </th>
-                            <th className="px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                            <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                               Total
                             </th>
                           </tr>
@@ -807,30 +866,33 @@ export default function ViewDataPage() {
                                     : ''
                                 }`}
                               >
-                                <td className="px-3 py-3 text-sm text-gray-100">
+                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm text-gray-100 max-w-[120px] sm:max-w-none truncate">
                                   {line.description}
                                 </td>
-                                <td className="px-3 py-3 text-sm text-gray-400 font-mono">
+                                <td className="hidden sm:table-cell px-3 py-3 text-sm text-gray-400 font-mono">
                                   {line.supplierSku || '-'}
                                 </td>
-                                <td className="px-3 py-3 text-sm">
+                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm">
                                   {lineStatus.status === 'received' && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#166534] text-green-100 border border-green-500/60 whitespace-nowrap">
-                                      Received
+                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#166534] text-green-100 border border-green-500/60 whitespace-nowrap">
+                                      <span className="hidden sm:inline">Received</span>
+                                      <span className="sm:hidden">✓</span>
                                     </span>
                                   )}
                                   {lineStatus.status === 'partial' && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#78350f] text-amber-100 border border-amber-500/60 whitespace-nowrap">
-                                      Partially received ({lineStatus.receivedQuantity}/{line.quantity})
+                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#78350f] text-amber-100 border border-amber-500/60 whitespace-nowrap">
+                                      <span className="hidden sm:inline">Partial ({lineStatus.receivedQuantity}/{line.quantity})</span>
+                                      <span className="sm:hidden">{lineStatus.receivedQuantity}/{line.quantity}</span>
                                     </span>
                                   )}
                                   {lineStatus.status === 'not_received' && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#111111] text-gray-300 border border-[#333333] whitespace-nowrap">
-                                      Not received
+                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#111111] text-gray-300 border border-[#333333] whitespace-nowrap">
+                                      <span className="hidden sm:inline">Not received</span>
+                                      <span className="sm:hidden">—</span>
                                     </span>
                                   )}
                                 </td>
-                                <td className="px-3 py-3 text-sm text-right">
+                                <td className="hidden sm:table-cell px-3 py-3 text-sm text-right">
                                   {lineStatus.remainingQuantity > 0 && (
                                     <div className="flex items-center justify-end gap-2">
                                       <input
@@ -864,13 +926,13 @@ export default function ViewDataPage() {
                                     </div>
                                   )}
                                 </td>
-                                <td className="px-3 py-3 text-sm text-gray-100 text-right">
+                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm text-gray-100 text-right">
                                   {line.quantity}
                                 </td>
-                                <td className="px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
+                                <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.unitCostExVAT, po.currency)}
                                 </td>
-                                <td className="px-3 py-3 text-xs sm:text-sm font-medium text-gray-100 text-right font-mono whitespace-nowrap">
+                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.lineTotalExVAT, po.currency)}
                                 </td>
                               </tr>
@@ -882,10 +944,18 @@ export default function ViewDataPage() {
                   </div>
 
                   {/* Footer with metadata */}
-                  <div className="px-6 py-3 bg-[#1a1a1a] border-t border-[#3a3a3a]">
-                    <p className="text-xs text-gray-400">
-                      Imported: {formatDate(po.createdAt)} • ID: {po.id}
+                  <div className="px-3 sm:px-6 py-2 sm:py-3 bg-[#1a1a1a] border-t border-[#3a3a3a] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p className="text-[10px] sm:text-xs text-gray-400 truncate">
+                      Imported: {formatDate(po.createdAt)}
                     </p>
+                    <button
+                      onClick={() => handleReceiveFullPO(po)}
+                      disabled={receivingPOId === po.id || receiveSummary.totalRemaining <= 0}
+                      className="inline-flex items-center justify-center px-3 py-1 text-[11px] sm:text-sm rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Mark all remaining quantities on this PO as received"
+                    >
+                      {receivingPOId === po.id ? 'Receiving...' : 'Mark all received'}
+                    </button>
                   </div>
                 </div>
                     );
@@ -893,77 +963,6 @@ export default function ViewDataPage() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Suppliers Section */}
-        {data && data.suppliers.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-100 mb-6">Suppliers</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.suppliers.map((supplier) => {
-                const supplierPOCount = data.purchaseOrders.filter(po => po.supplierId === supplier.id).length;
-                
-                return (
-                  <div key={supplier.id} className="bg-[#2a2a2a] rounded-lg shadow p-6 relative border border-[#3a3a3a]">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-semibold text-gray-100 flex-1">
-                        {supplier.name}
-                      </h3>
-                      <button
-                        onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
-                        disabled={deletingSupplier === supplier.id}
-                        className="ml-2 text-[#ff6b35] hover:text-[#ff8c42] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Delete Supplier"
-                      >
-                        {deletingSupplier === supplier.id ? (
-                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    
-                    {supplierPOCount > 0 && (
-                      <div className="mb-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3a3a3a] text-[#ff6b35]">
-                        {supplierPOCount} PO{supplierPOCount !== 1 ? 's' : ''}
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2 text-sm">
-                      {supplier.address && (
-                        <p className="text-gray-300">
-                          <span className="font-medium">Address:</span> {supplier.address}
-                        </p>
-                      )}
-                      {supplier.email && (
-                        <p className="text-gray-300">
-                          <span className="font-medium">Email:</span> {supplier.email}
-                        </p>
-                      )}
-                      {supplier.phone && (
-                        <p className="text-gray-300">
-                          <span className="font-medium">Phone:</span> {supplier.phone}
-                        </p>
-                      )}
-                      {supplier.vatNumber && (
-                        <p className="text-gray-300">
-                          <span className="font-medium">VAT:</span> {supplier.vatNumber}
-                        </p>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-4 pt-4 border-t border-[#3a3a3a]">
-                      Added: {formatDate(supplier.createdAt)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>

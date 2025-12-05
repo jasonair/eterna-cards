@@ -54,6 +54,7 @@ CREATE TABLE products (
   supplierid UUID REFERENCES suppliers(id),
   category TEXT,
   tags TEXT[],
+  imageurl TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
