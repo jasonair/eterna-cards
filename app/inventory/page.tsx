@@ -312,6 +312,30 @@ export default function InventoryPage() {
     [folderTree],
   );
 
+  const activeFolderPath = useMemo(
+    () => {
+      if (activeFolderId === 'all') return [];
+
+      const path: { id: string; name: string }[] = [];
+      let currentId: string | null = activeFolderId;
+      const safetyLimit = 50;
+
+      while (currentId && currentId !== 'all' && path.length < safetyLimit) {
+        const folder = folders.find((f) => f.id === currentId);
+        if (!folder) break;
+
+        path.unshift({ id: folder.id, name: folder.name });
+
+        const parentId: string | null = folderParentById.get(currentId) ?? null;
+        if (!parentId || parentId === currentId) break;
+        currentId = parentId;
+      }
+
+      return path;
+    },
+    [activeFolderId, folders, folderParentById],
+  );
+
   const toggleFolderCollapsed = (id: string) => {
     setCollapsedFolders((prev) => ({
       ...prev,
@@ -879,7 +903,11 @@ export default function InventoryPage() {
                 }`}
               >
                 <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Products</p>
-                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{items.length.toLocaleString()}</p>
+                {loading ? (
+                  <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                ) : (
+                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{items.length.toLocaleString()}</p>
+                )}
               </button>
               <button
                 type="button"
@@ -891,12 +919,16 @@ export default function InventoryPage() {
                 }`}
               >
                 <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Hand</p>
-                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
-                  {items.reduce(
-                    (sum, row) => sum + (row.inventory?.quantityOnHand || 0),
-                    0
-                  ).toLocaleString()}
-                </p>
+                {loading ? (
+                  <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                ) : (
+                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                    {items.reduce(
+                      (sum, row) => sum + (row.inventory?.quantityOnHand || 0),
+                      0
+                    ).toLocaleString()}
+                  </p>
+                )}
               </button>
               <button
                 type="button"
@@ -908,18 +940,26 @@ export default function InventoryPage() {
                 }`}
               >
                 <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
-                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
-                  {items.reduce((sum, row) => sum + (row.quantityInTransit || 0), 0).toLocaleString()}
-                </p>
+                {loading ? (
+                  <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                ) : (
+                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                    {items.reduce((sum, row) => sum + (row.quantityInTransit || 0), 0).toLocaleString()}
+                  </p>
+                )}
               </button>
               <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
                 <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Total Value</p>
-                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
-                  £{items.reduce(
-                    (sum, row) => sum + (((row.inventory?.quantityOnHand || 0) + (row.quantityInTransit || 0)) * (row.inventory?.averageCostGBP || 0)),
-                    0
-                  ).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+                {loading ? (
+                  <div className="h-6 sm:h-7 w-24 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                ) : (
+                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                    £{items.reduce(
+                      (sum, row) => sum + (((row.inventory?.quantityOnHand || 0) + (row.quantityInTransit || 0)) * (row.inventory?.averageCostGBP || 0)),
+                      0
+                    ).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1206,14 +1246,18 @@ export default function InventoryPage() {
                 >
                   All items
                 </button>
-                {activeFolderId !== 'all' && (
-                  <>
+                {activeFolderPath.map((segment, index) => (
+                  <span key={segment.id} className="flex items-center gap-2">
                     <span className="text-gray-500">/</span>
-                    <span className="text-gray-100 font-medium">
-                      {folders.find((f) => f.id === activeFolderId)?.name || 'Folder'}
-                    </span>
-                  </>
-                )}
+                    {index === activeFolderPath.length - 1 ? (
+                      <span className="px-2 py-0.5 rounded-md bg-[#ff6b35] text-white font-semibold">
+                        {segment.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">{segment.name}</span>
+                    )}
+                  </span>
+                ))}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <button

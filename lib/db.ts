@@ -762,12 +762,13 @@ export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
       0,
     );
 
-    // Derive expected average unit cost from what is currently on order (transit)
-    let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
-    if (remainingTransit.length > 0) {
-      let totalRemaining = 0;
-      let totalCost = 0;
+    // Derive expected average unit cost from on-hand + what is currently on order (transit)
+    const onHandQty = inventory ? inventory.quantityOnHand : 0;
+    const onHandAvg = inventory ? inventory.averageCostGBP : 0;
+    let blendedTotalQty = onHandQty;
+    let blendedTotalCost = onHandQty * onHandAvg;
 
+    if (remainingTransit.length > 0) {
       for (const t of remainingTransit) {
         const qty = Number(t.remainingquantity ?? 0);
         if (!Number.isFinite(qty) || qty <= 0) continue;
@@ -781,13 +782,14 @@ export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
 
         const unitCost = Number.isFinite(rawUnitCost) && rawUnitCost >= 0 ? rawUnitCost : 0;
 
-        totalRemaining += qty;
-        totalCost += qty * unitCost;
+        blendedTotalQty += qty;
+        blendedTotalCost += qty * unitCost;
       }
+    }
 
-      if (totalRemaining > 0 && totalCost > 0) {
-        displayAverageCost = Number((totalCost / totalRemaining).toFixed(4));
-      }
+    let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
+    if (blendedTotalQty > 0 && blendedTotalCost > 0) {
+      displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
     }
 
     if (inventory) {

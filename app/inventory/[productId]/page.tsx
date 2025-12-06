@@ -34,6 +34,8 @@ interface InventoryRecord {
   productId: string;
   quantityOnHand: number;
   averageCostGBP: number;
+  averageCostInTransitGBP?: number;
+  averageCostCombinedGBP?: number;
   lastUpdated: string;
 }
 
@@ -118,6 +120,7 @@ export default function ProductHistoryPage() {
     aliases: '',
     imageUrl: '',
   });
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -327,6 +330,43 @@ export default function ProductHistoryPage() {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!data) return;
+
+    if (
+      !window.confirm(
+        `Delete "${data.product.name}" from inventory? This will also remove any on-hand and in-transit records for this product.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      setError(null);
+
+      const res = await fetch(
+        `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
+        {
+          method: 'DELETE',
+        },
+      );
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete product');
+      }
+
+      router.push('/inventory');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to delete product',
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center px-4">
@@ -516,7 +556,9 @@ export default function ProductHistoryPage() {
                 />
               ) : (
                 <p className="text-sm text-gray-300">
-                  {product.aliases && product.aliases.length ? product.aliases.join(' / ') : '-'}
+                  {product.aliases && product.aliases.length
+                    ? product.aliases.join(' / ')
+                    : '-'}
                 </p>
               )}
             </div>
@@ -527,7 +569,7 @@ export default function ProductHistoryPage() {
             {/* Metrics 2x2 grid */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">Quantity</p>
+                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">In hand</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-100">{inventory?.quantityOnHand || 0}</p>
               </div>
               <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
@@ -811,6 +853,17 @@ export default function ProductHistoryPage() {
               </table>
             </div>
           )}
+        </div>
+        <div className="flex justify-end mt-4">
+          <button
+            type="button"
+            onClick={handleDeleteProduct}
+            disabled={deleting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50 text-sm"
+            aria-label={deleting ? 'Deleting product' : 'Delete product'}
+          >
+            {deleting ? 'Deleting…' : 'Delete product'}
+          </button>
         </div>
       </div>
     </div>

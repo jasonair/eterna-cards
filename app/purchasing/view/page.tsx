@@ -85,11 +85,11 @@ export default function ViewDataPage() {
     try {
       setLoading(true);
       const response = await fetch('/api/purchasing/po/view');
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch data');
       }
-      
+
       const result = await response.json();
       setData(result);
       setError(null);
@@ -572,7 +572,7 @@ export default function ViewDataPage() {
   };
 
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="min-h-screen bg-[#1a1a1a] py-12 px-4 flex items-center justify-center">
         <div className="text-center">
@@ -583,7 +583,7 @@ export default function ViewDataPage() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="min-h-screen bg-[#1a1a1a] py-12 px-4">
         <div className="max-w-4xl mx-auto">
@@ -633,7 +633,8 @@ export default function ViewDataPage() {
             </button>
             <button
               onClick={fetchData}
-              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              disabled={loading}
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -647,17 +648,29 @@ export default function ViewDataPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
             <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Total Value</p>
-            <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">£{(data?.poLines.reduce((sum, line) => sum + line.lineTotalExVAT, 0) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            {loading ? (
+              <div className="h-6 sm:h-7 w-28 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">£{(data?.poLines.reduce((sum, line) => sum + line.lineTotalExVAT, 0) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            )}
           </div>
 
           <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
             <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Orders</p>
-            <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.purchaseOrders.length || 0).toLocaleString()}</p>
+            {loading ? (
+              <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.purchaseOrders.length || 0).toLocaleString()}</p>
+            )}
           </div>
 
           <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
             <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
-            <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.transit.filter(t => t.remainingQuantity > 0).reduce((sum, t) => sum + t.remainingQuantity, 0) || 0).toLocaleString()}</p>
+            {loading ? (
+              <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.transit.filter(t => t.remainingQuantity > 0).reduce((sum, t) => sum + t.remainingQuantity, 0) || 0).toLocaleString()}</p>
+            )}
           </div>
         </div>
 
@@ -683,7 +696,11 @@ export default function ViewDataPage() {
         )}
 
         {/* Purchase Orders List - Grouped by Month */}
-        {!isEmpty && (
+        {!isEmpty && (loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#ff6b35]"></div>
+          </div>
+        ) : (
           <div className="space-y-8">
             {Object.entries(groupPOsByMonth()).map(([month, pos]) => (
               <div key={month} className="space-y-4">
@@ -934,7 +951,7 @@ export default function ViewDataPage() {
               </div>
             ))}
           </div>
-        )}
+        ))}
       </div>
 
       {/* Edit PO Modal */}

@@ -166,17 +166,17 @@ export async function GET(request: NextRequest) {
         };
       });
 
-    // Derive an expected average unit cost from current POs (transit) and
-    // use that as the primary source for averageCostGBP.
+    // Derive an expected average unit cost from on-hand + current POs (transit)
     const remainingTransit = transitRows.filter(
       (t: any) => Number(t.remainingquantity ?? 0) > 0,
     );
 
-    let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
-    if (remainingTransit.length > 0) {
-      let totalRemaining = 0;
-      let totalCost = 0;
+    const onHandQty = inventory ? inventory.quantityOnHand : 0;
+    const onHandAvg = inventory ? inventory.averageCostGBP : 0;
+    let blendedTotalQty = onHandQty;
+    let blendedTotalCost = onHandQty * onHandAvg;
 
+    if (remainingTransit.length > 0) {
       for (const t of remainingTransit) {
         const qty = Number(t.remainingquantity ?? 0);
         if (!Number.isFinite(qty) || qty <= 0) continue;
@@ -194,13 +194,14 @@ export async function GET(request: NextRequest) {
 
         const unitCost = Number.isFinite(rawUnitCost) && rawUnitCost >= 0 ? rawUnitCost : 0;
 
-        totalRemaining += qty;
-        totalCost += qty * unitCost;
+        blendedTotalQty += qty;
+        blendedTotalCost += qty * unitCost;
       }
+    }
 
-      if (totalRemaining > 0 && totalCost > 0) {
-        displayAverageCost = Number((totalCost / totalRemaining).toFixed(4));
-      }
+    let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
+    if (blendedTotalQty > 0 && blendedTotalCost > 0) {
+      displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
     }
 
     if (inventory) {
