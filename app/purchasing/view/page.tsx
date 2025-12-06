@@ -598,8 +598,8 @@ export default function ViewDataPage() {
   const isEmpty = !data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0);
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-12 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 px-3 sm:px-4 lg:px-6">
+      <div className="w-full space-y-6">
         {/* Navigation Header */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
@@ -612,23 +612,13 @@ export default function ViewDataPage() {
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             <a
-              href="/purchasing/import?mode=manual"
-              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
-            >
-              <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span className="hidden sm:inline">Create New PO</span>
-              <span className="sm:hidden">New</span>
-            </a>
-            <a
               href="/purchasing/import"
               className="inline-flex items-center px-3 sm:px-4 py-2 border border-[#3a3a3a] text-xs sm:text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
             >
               <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              <span className="hidden sm:inline">Import from Invoice</span>
+              <span className="hidden sm:inline">Import Invoice</span>
               <span className="sm:hidden">Import</span>
             </a>
             <button
@@ -654,47 +644,20 @@ export default function ViewDataPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-3 sm:p-6 border border-[#3a3a3a]">
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="hidden sm:block flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
-                <svg className="h-6 w-6 text-[#ff6b35]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <div className="sm:ml-4">
-                <p className="text-[10px] sm:text-sm font-medium text-gray-400">Suppliers</p>
-                <p className="text-lg sm:text-2xl font-bold text-gray-100">{data?.suppliers.length || 0}</p>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Total Value</p>
+            <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">£{(data?.poLines.reduce((sum, line) => sum + line.lineTotalExVAT, 0) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
 
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-3 sm:p-6 border border-[#3a3a3a]">
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="hidden sm:block flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
-                <svg className="h-6 w-6 text-[#ff6b35]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="sm:ml-4">
-                <p className="text-[10px] sm:text-sm font-medium text-gray-400">Orders</p>
-                <p className="text-lg sm:text-2xl font-bold text-gray-100">{data?.purchaseOrders.length || 0}</p>
-              </div>
-            </div>
+          <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Orders</p>
+            <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.purchaseOrders.length || 0).toLocaleString()}</p>
           </div>
 
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-3 sm:p-6 border border-[#3a3a3a]">
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="hidden sm:block flex-shrink-0 bg-[#3a3a3a] rounded-lg p-3">
-                <svg className="h-6 w-6 text-[#ff6b35]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </div>
-              <div className="sm:ml-4">
-                <p className="text-[10px] sm:text-sm font-medium text-gray-400">Lines</p>
-                <p className="text-lg sm:text-2xl font-bold text-gray-100">{data?.poLines.length || 0}</p>
-              </div>
-            </div>
+          <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
+            <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.transit.filter(t => t.remainingQuantity > 0).reduce((sum, t) => sum + t.remainingQuantity, 0) || 0).toLocaleString()}</p>
           </div>
         </div>
 
@@ -807,9 +770,9 @@ export default function ViewDataPage() {
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Currency</p>
                         <p className="text-sm font-medium text-gray-100 mt-1">{po.currency}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Payment Terms</p>
-                        <p className="text-sm font-medium text-gray-100 mt-1">
+                        <p className="text-sm font-medium text-gray-100 mt-1 truncate">
                           {po.paymentTerms || 'N/A'}
                         </p>
                       </div>
@@ -821,9 +784,9 @@ export default function ViewDataPage() {
                   </div>
 
                   {/* Line Items */}
-                  <div className="px-3 sm:px-6 py-3 sm:py-4">
+                  <div className="px-3 sm:px-6 py-3 sm:py-4 overflow-hidden">
                     <h4 className="text-xs sm:text-sm font-semibold text-gray-100 mb-2 sm:mb-3">Line Items</h4>
-                    <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-[#3a3a3a] text-xs sm:text-sm">
                         <thead>
                           <tr>
@@ -854,6 +817,7 @@ export default function ViewDataPage() {
                             const lineStatus = getLineReceiveStatus(line);
                             const isReceived = lineStatus.status === 'received';
                             const isPartial = lineStatus.status === 'partial';
+                            const isLongDescription = (line.description || '').length > 60;
 
                             return (
                               <tr
@@ -866,8 +830,14 @@ export default function ViewDataPage() {
                                     : ''
                                 }`}
                               >
-                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm text-gray-100 max-w-[120px] sm:max-w-none truncate">
-                                  {line.description}
+                                <td
+                                  className={`px-2 sm:px-3 py-2 sm:py-3 text-gray-100 ${
+                                    isLongDescription
+                                      ? 'text-[11px] sm:text-xs leading-snug'
+                                      : 'text-xs sm:text-sm'
+                                  }`}
+                                >
+                                  <span className="break-words">{line.description}</span>
                                 </td>
                                 <td className="hidden sm:table-cell px-3 py-3 text-sm text-gray-400 font-mono">
                                   {line.supplierSku || '-'}

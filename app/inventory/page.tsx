@@ -330,7 +330,7 @@ export default function InventoryPage() {
 
   const visibleItems = useMemo(
     () => {
-      // Only show products that have stock on hand or quantity in transit
+      // Only show products that have stock in hand or quantity in transit
       let nonZeroStock = filteredItems.filter((row) => {
         const onHand = row.inventory?.quantityOnHand ?? 0;
         const inTransit = row.quantityInTransit ?? 0;
@@ -715,17 +715,11 @@ export default function InventoryPage() {
     <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 pr-3 sm:pr-4 lg:pr-6 pl-3 sm:pl-4 lg:pl-6 md:pl-0">
       <div className="w-full space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 mb-1">Inventory</h1>
-            <p className="text-gray-300 text-sm">
-              Live view of products, on-hand stock, and in-transit quantities.
-            </p>
-            <p className="text-xs text-[#ff6b35] mt-2">
-              Scan a barcode into the search box below or search by name / SKU.
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">Inventory</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
             <a
               href="/purchasing/import"
               className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
@@ -874,7 +868,7 @@ export default function InventoryPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => setStockFilter('all')}
@@ -884,8 +878,8 @@ export default function InventoryPage() {
                     : 'border-[#3a3a3a] hover:border-[#ff6b35]/70 hover:shadow-md hover:shadow-black/30'
                 }`}
               >
-                <p className="text-xs sm:text-sm font-medium tracking-wide text-gray-300 uppercase">Products</p>
-                <p className="text-2xl sm:text-3xl font-semibold text-gray-50 mt-1">{items.length}</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Products</p>
+                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{items.length.toLocaleString()}</p>
               </button>
               <button
                 type="button"
@@ -896,12 +890,12 @@ export default function InventoryPage() {
                     : 'border-[#3a3a3a] hover:border-[#ff6b35]/70 hover:shadow-md hover:shadow-black/30'
                 }`}
               >
-                <p className="text-xs sm:text-sm font-medium tracking-wide text-gray-300 uppercase">In Hand</p>
-                <p className="text-2xl sm:text-3xl font-semibold text-gray-50 mt-1">
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Hand</p>
+                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
                   {items.reduce(
                     (sum, row) => sum + (row.inventory?.quantityOnHand || 0),
                     0
-                  )}
+                  ).toLocaleString()}
                 </p>
               </button>
               <button
@@ -913,11 +907,20 @@ export default function InventoryPage() {
                     : 'border-[#3a3a3a] hover:border-[#ff6b35]/70 hover:shadow-md hover:shadow-black/30'
                 }`}
               >
-                <p className="text-xs sm:text-sm font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
-                <p className="text-2xl sm:text-3xl font-semibold text-gray-50 mt-1">
-                  {items.reduce((sum, row) => sum + (row.quantityInTransit || 0), 0)}
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
+                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                  {items.reduce((sum, row) => sum + (row.quantityInTransit || 0), 0).toLocaleString()}
                 </p>
               </button>
+              <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Total Value</p>
+                <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                  £{items.reduce(
+                    (sum, row) => sum + (((row.inventory?.quantityOnHand || 0) + (row.quantityInTransit || 0)) * (row.inventory?.averageCostGBP || 0)),
+                    0
+                  ).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1244,6 +1247,7 @@ export default function InventoryPage() {
                     .map((word) => word[0])
                     .join('')
                     .toUpperCase();
+                  const isLongName = (row.product.name || '').length > 40;
                   return (
                     <div
                       key={row.product.id}
@@ -1257,12 +1261,16 @@ export default function InventoryPage() {
                           {initials || 'PR'}
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1">
                         <div className="block">
-                          <h3 className="text-sm font-semibold text-gray-100 truncate">
+                          <h3
+                            className={`font-semibold text-gray-100 break-words ${
+                              isLongName ? 'text-xs leading-snug' : 'text-sm'
+                            }`}
+                          >
                             {row.product.name}
                           </h3>
-                          <p className="text-xs text-gray-400 mt-1 truncate">
+                          <p className="text-xs text-gray-400 mt-1">
                             {row.supplier?.name || 'Unknown supplier'}
                           </p>
                         </div>
@@ -1271,7 +1279,7 @@ export default function InventoryPage() {
                       <div className="flex items-center justify-between text-sm mt-2">
                         <div className="flex flex-wrap gap-3">
                           <span className="px-3 py-1 rounded-full bg-[#1f2a1f] text-green-300 border border-green-500/40 font-medium tracking-tight">
-                            On hand: {row.inventory?.quantityOnHand || 0}
+                            In hand: {row.inventory?.quantityOnHand || 0}
                           </span>
                           <span className="px-3 py-1 rounded-full bg-[#1f1f1f] text-gray-200 border border-[#3a3a3a] font-medium tracking-tight">
                             Transit: {row.quantityInTransit}

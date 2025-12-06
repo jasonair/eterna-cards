@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+interface SupplierOption {
+  id: string;
+  name: string;
+}
 
 interface NewProductForm {
   name: string;
@@ -12,6 +17,7 @@ interface NewProductForm {
   tags: string;
   aliases: string;
   imageUrl: string;
+  supplierId: string;
 }
 
 export default function NewProductPage() {
@@ -26,9 +32,11 @@ export default function NewProductPage() {
     tags: '',
     aliases: '',
     imageUrl: '',
+    supplierId: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
 
   const handleChange = (field: keyof NewProductForm, value: string) => {
     setForm((prev) => ({
@@ -37,11 +45,39 @@ export default function NewProductPage() {
     }));
   };
 
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      try {
+        const res = await fetch('/api/purchasing/po/view');
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || !Array.isArray(json.suppliers)) return;
+        setSuppliers(
+          json.suppliers.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+          })),
+        );
+      } catch (err) {
+        console.error('Failed to load suppliers for new product form', err);
+      }
+    };
+
+    loadSuppliers();
+  }, []);
+
   const parseList = (value: string): string[] =>
     value
       .split(',')
       .map((v) => v.trim())
       .filter((v) => v.length > 0);
+
+  const initials = form.name
+    .split(' ')
+    .filter((part) => part.length > 0)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 
   const handleCreate = async () => {
     const name = form.name.trim();
@@ -63,6 +99,7 @@ export default function NewProductPage() {
         tags: parseList(form.tags),
         aliases: parseList(form.aliases),
         imageUrl: form.imageUrl.trim() || null,
+        supplierId: form.supplierId.trim() || null,
       };
 
       const res = await fetch('/api/inventory/product', {
@@ -91,128 +128,156 @@ export default function NewProductPage() {
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-[1400px] mx-auto space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <button
               type="button"
               onClick={() => router.back()}
-              className="text-xs text-[#ff6b35] hover:text-[#ff8c42] mb-2"
+              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#ff6b35] mb-2"
             >
-              Back to inventory
+              <span>←</span>
+              <span>Back to inventory</span>
             </button>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 truncate">New product</h1>
             <p className="text-xs text-gray-400 mt-1 truncate">
               Create a standalone product that can receive stock later from purchase orders or manual receipts.
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={saving}
+              className="px-4 py-2 rounded-md bg-[#ff6b35] text-white text-xs sm:text-sm font-medium hover:bg-[#ff8c42] disabled:opacity-50"
+            >
+              {saving ? 'Creating…' : 'Create product'}
+            </button>
+          </div>
         </div>
 
-        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 text-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-wide text-gray-400">Identity</p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={saving}
-                className="px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] hover:bg-[#ff8c42] disabled:opacity-50"
-              >
-                {saving ? 'Creating…' : 'Create product'}
-              </button>
-            </div>
+        {error && (
+          <div className="bg-[#3a2a2a] border border-red-500 rounded-md px-3 py-2 text-[11px] text-red-200">
+            {error}
           </div>
+        )}
 
-          {error && (
-            <div className="bg-[#3a2a2a] border border-red-500 rounded-md px-3 py-2 text-[11px] text-red-200">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <p className="text-gray-400">Name</p>
-              <input
-                value={form.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-              />
-            </div>
-            <div>
-              <p className="text-gray-400">Primary SKU</p>
-              <input
-                value={form.primarySku}
-                onChange={(e) => handleChange('primarySku', e.target.value)}
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Left column: Product Information card */}
+          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-100">Product Information</h2>
+            <div className="relative w-full h-48 sm:h-64 rounded-md overflow-hidden border border-[#3a3a3a] bg-[#1a1a1a]">
+              {form.imageUrl.trim() ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={form.imageUrl}
+                  alt={form.name || 'Product image'}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-3xl font-bold text-gray-300 uppercase">
+                  {initials || 'PR'}
+                </div>
+              )}
             </div>
             <div>
-              <p className="text-gray-400">Supplier SKU</p>
+              <p className="text-gray-400 text-xs mb-1">Image URL</p>
               <input
-                value={form.supplierSku}
-                onChange={(e) => handleChange('supplierSku', e.target.value)}
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                value={form.imageUrl}
+                onChange={(e) => handleChange('imageUrl', e.target.value)}
+                placeholder="Paste image URL (e.g. from Supabase storage)"
+                className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
               />
             </div>
-            <div>
-              <p className="text-gray-400">Category</p>
-              <input
-                value={form.category}
-                onChange={(e) => handleChange('category', e.target.value)}
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-              />
-            </div>
-            <div>
-              <p className="text-gray-400">Barcodes</p>
-              <input
-                value={form.barcodes}
-                onChange={(e) => handleChange('barcodes', e.target.value)}
-                placeholder="Comma-separated"
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
-              />
-            </div>
-            <div>
-              <p className="text-gray-400">Tags</p>
-              <input
-                value={form.tags}
-                onChange={(e) => handleChange('tags', e.target.value)}
-                placeholder="Comma-separated"
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-gray-400">Aliases</p>
+            <div className="border-t border-[#3a3a3a] pt-3">
+              <p className="text-gray-400 text-xs mb-1">Notes / Aliases</p>
               <input
                 value={form.aliases}
                 onChange={(e) => handleChange('aliases', e.target.value)}
                 placeholder="Comma-separated alternative names used on invoices, etc."
-                className="w-full mt-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
               />
             </div>
-            <div className="sm:col-span-2">
-              <p className="text-gray-400">Image</p>
-              <div className="mt-1 space-y-2">
+          </div>
+
+          {/* Right column: Product Details + QR & Barcode cards */}
+          <div className="space-y-5">
+            <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-100 mb-1">Product Details</h2>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Name</p>
                 <input
-                  value={form.imageUrl}
-                  onChange={(e) => handleChange('imageUrl', e.target.value)}
-                  placeholder="Paste image URL (e.g. from Supabase storage)"
+                  value={form.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
                   className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
                 />
-                {form.imageUrl.trim() && (
-                  <div className="inline-flex items-center gap-2 rounded-md border border-[#3a3a3a] bg-[#111111] px-2 py-1">
-                    <div className="relative h-12 w-12 overflow-hidden rounded">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={form.imageUrl}
-                        alt={form.name || 'Product image'}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <span className="text-[11px] text-gray-300 truncate max-w-[200px]">
-                      Preview
-                    </span>
-                  </div>
-                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Primary SKU</p>
+                  <input
+                    value={form.primarySku}
+                    onChange={(e) => handleChange('primarySku', e.target.value)}
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Supplier SKU</p>
+                  <input
+                    value={form.supplierSku}
+                    onChange={(e) => handleChange('supplierSku', e.target.value)}
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Category</p>
+                  <input
+                    value={form.category}
+                    onChange={(e) => handleChange('category', e.target.value)}
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Supplier</p>
+                  <select
+                    value={form.supplierId}
+                    onChange={(e) => handleChange('supplierId', e.target.value)}
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                  >
+                    <option value="">No supplier (optional)</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-100 mb-1">QR & Barcode</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Barcodes</p>
+                  <input
+                    value={form.barcodes}
+                    onChange={(e) => handleChange('barcodes', e.target.value)}
+                    placeholder="Comma-separated"
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Tags</p>
+                  <input
+                    value={form.tags}
+                    onChange={(e) => handleChange('tags', e.target.value)}
+                    placeholder="Comma-separated"
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                  />
+                </div>
               </div>
             </div>
           </div>

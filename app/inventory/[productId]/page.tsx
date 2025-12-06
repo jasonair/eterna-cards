@@ -373,8 +373,11 @@ export default function ProductHistoryPage() {
     .join('')
     .toUpperCase();
 
-  const totalValue = (inventory?.quantityOnHand || 0) * (inventory?.averageCostGBP || 0);
   const inTransitQty = transit.reduce((sum, t) => sum + (t.transit.remainingQuantity || 0), 0);
+  const quantityOnHand = inventory?.quantityOnHand || 0;
+  const totalStockForValue = quantityOnHand + inTransitQty;
+  const totalValue = totalStockForValue * (inventory?.averageCostGBP || 0);
+  const isLongProductName = (product.name || '').length > 40;
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
@@ -390,7 +393,11 @@ export default function ProductHistoryPage() {
               <span>←</span>
               <span>Back to inventory</span>
             </button>
-            <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-100 uppercase tracking-tight break-words">
+            <h1
+              className={`font-bold text-gray-100 uppercase tracking-tight break-words ${
+                isLongProductName ? 'text-lg sm:text-xl md:text-2xl leading-snug' : 'text-lg sm:text-2xl md:text-3xl'
+              }`}
+            >
               {product.name}
             </h1>
             <p className="text-xs text-gray-500 mt-1">
@@ -720,6 +727,9 @@ export default function ProductHistoryPage() {
                           (row.poLine?.unitCostExVAT ?? row.transit.unitCostGBP) *
                             ordered;
 
+                    const isLongDescription =
+                      (row.poLine?.description || '').length > 60;
+
                     return (
                       <tr key={row.transit.id} className="hover:bg-[#1a1a1a]">
                         <td className="px-2 sm:px-3 py-2 align-top">
@@ -739,12 +749,16 @@ export default function ProductHistoryPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-2 sm:px-3 py-2 align-top max-w-xs hidden sm:table-cell">
-                          <p className="text-gray-100 truncate">
+                        <td className="px-2 sm:px-3 py-2 align-top hidden sm:table-cell">
+                          <p
+                            className={`text-gray-100 break-words ${
+                              isLongDescription ? 'text-[10px] sm:text-xs leading-snug' : ''
+                            }`}
+                          >
                             {row.poLine?.description || '-'}
                           </p>
                           {row.poLine?.supplierSku && (
-                            <p className="text-gray-400 font-mono truncate">
+                            <p className="text-gray-400 font-mono">
                               {row.poLine.supplierSku}
                             </p>
                           )}

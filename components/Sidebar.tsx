@@ -111,6 +111,11 @@ const mainNav: NavItem[] = [
   },
 ];
 
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
 function isActivePath(pathname: string | null, href: string) {
   if (!pathname) return false;
   if (pathname === href) return true;
@@ -121,16 +126,46 @@ function isActivePath(pathname: string | null, href: string) {
   return pathname.startsWith(href + '/');
 }
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden sm:flex sm:fixed sm:inset-y-0 sm:left-0 flex-col w-48 lg:w-56 bg-[#141414] border-r border-[#2a2a2a] text-gray-400 z-30">
-      <div className="flex flex-col items-center justify-between flex-1 py-4">
-        {/* Top: logo + main navigation */}
+    <aside
+      className={`hidden sm:flex sm:fixed sm:inset-y-0 sm:left-0 flex-col bg-[#141414] border-r border-[#2a2a2a] text-gray-400 z-30 transition-[width] duration-200 ${
+        collapsed ? 'w-24' : 'w-48 lg:w-56'
+      }`}
+    >
+      <div className="relative flex flex-col items-center justify-between flex-1 py-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="hidden sm:flex absolute top-1/2 -right-4 h-8 w-8 -translate-y-1/2 transform items-center justify-center rounded-full border border-[#2a2a2a] bg-[#1b1b1b] hover:bg-[#222222] text-gray-300 shadow-md transition-colors"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+        >
+          <svg
+            className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M14.5 6l-5 6 5 6"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        {/* Top: toggle + logo + main navigation */}
         <div className="flex flex-col items-start gap-4 w-full">
-          <div className="w-full flex justify-center">
-            <div className="h-16 w-16 rounded-full bg-[#ff6b35] overflow-hidden flex items-center justify-center shadow-lg">
+          <div className="w-full flex items-start justify-center px-3">
+            <div
+              className={`rounded-full bg-[#ff6b35] overflow-hidden flex items-center justify-center shadow-lg transition-all duration-200 ${
+                collapsed ? 'h-10 w-10' : 'h-16 w-16'
+              }`}
+            >
               <img
                 src="/eterna-cards-logo-2.jpg"
                 alt="Profile"
@@ -145,10 +180,14 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="w-full flex items-center justify-start gap-2 px-4"
+                  className={`w-full flex items-center transition-all duration-200 ${
+                    collapsed ? 'justify-center px-0 gap-0' : 'justify-start px-4 gap-2'
+                  }`}
                 >
                   <div
-                    className={`flex items-center justify-center rounded-xl w-10 h-10 transition-colors ${
+                    className={`flex items-center justify-center transition-colors ${
+                      collapsed ? 'w-9 h-9 rounded-full' : 'w-10 h-10 rounded-xl'
+                    } ${
                       active
                         ? 'bg-[#ff6b35] text-white shadow-md'
                         : 'text-gray-400 hover:text-gray-100 hover:bg-[#242424]'
@@ -158,9 +197,9 @@ export default function Sidebar() {
                     {item.icon}
                   </div>
                   <span
-                    className={`text-sm font-semibold tracking-tight whitespace-nowrap ${
+                    className={`text-sm font-semibold tracking-tight whitespace-nowrap transition-all duration-150 ${
                       active ? 'text-gray-100' : 'text-gray-500'
-                    }`}
+                    } ${collapsed ? 'hidden' : 'block'}`}
                   >
                     {item.label}
                   </span>
