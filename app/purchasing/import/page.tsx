@@ -583,61 +583,61 @@ function ImportPageContent() {
   };
 
   return (
-      <div className="min-h-screen bg-[#1a1a1a] py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-12 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto">
         {/* Navigation Header */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-100 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 mb-2">
               Purchase Order Import
             </h1>
-            <p className="text-gray-300">
+            <p className="text-sm sm:text-base text-gray-300">
               Upload invoice files and group them before AI analysis
             </p>
-            <p className="text-sm text-[#ff6b35] font-medium mt-2">
+            <p className="text-xs sm:text-sm text-[#ff6b35] font-medium mt-2 hidden sm:block">
               💡 Tip: Drag files between groups to merge multiple pages into one purchase order
             </p>
           </div>
-          <div className="flex flex-col items-end gap-3">
-            <div className="inline-flex items-center rounded-lg border border-[#3a3a3a] bg-[#141414] p-1">
+          <div className="flex flex-col items-start sm:items-end gap-3">
+            <div className="inline-flex items-center rounded-lg border border-[#3a3a3a] bg-[#141414] p-1 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setMode('import')}
-                className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   mode === 'import'
                     ? 'bg-[#ff6b35] text-white shadow-md'
                     : 'text-gray-300 hover:text-gray-100 hover:bg-[#242424]'
                 }`}
               >
-                Import from invoice
+                Import
               </button>
               <button
                 type="button"
                 onClick={() => setMode('manual')}
-                className={`ml-1 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 sm:flex-none ml-1 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   mode === 'manual'
                     ? 'bg-[#ff6b35] text-white shadow-md'
                     : 'text-gray-300 hover:text-gray-100 hover:bg-[#242424]'
                 }`}
               >
-                Manual entry
+                Manual
               </button>
             </div>
             <button
               onClick={navigateToView}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              View All Purchase Orders
+              View Orders
             </button>
           </div>
         </div>
         {mode === 'import' && (
           <>
             {/* Upload Form */}
-            <div className="bg-[#2a2a2a] rounded-lg shadow-md p-6 mb-6 border border-[#3a3a3a]">
+            <div className="bg-[#2a2a2a] rounded-lg shadow-md p-4 sm:p-6 mb-6 border border-[#3a3a3a]">
               <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-3">
@@ -711,7 +711,7 @@ function ImportPageContent() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {fileGroups.map((group) => {
                     const groupResult = groupResults.find(r => r.group.id === group.id);
                     const isProcessing = groupResult?.status === 'processing';

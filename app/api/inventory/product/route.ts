@@ -60,11 +60,12 @@ export async function GET(request: NextRequest) {
       supplierId: productRow.supplierid ?? null,
       category: productRow.category ?? null,
       tags: productRow.tags ?? [],
+      imageUrl: productRow.imageurl ?? null,
       createdAt: productRow.created_at,
       updatedAt: productRow.updated_at,
     };
 
-    const inventory =
+    let inventory =
       inventoryRows[0]
         ? {
             id: inventoryRows[0].id,
@@ -165,6 +166,56 @@ export async function GET(request: NextRequest) {
         };
       });
 
+    // Derive an expected average unit cost from on-hand + current POs (transit)
+    const remainingTransit = transitRows.filter(
+      (t: any) => Number(t.remainingquantity ?? 0) > 0,
+    );
+
+    const onHandQty = inventory ? inventory.quantityOnHand : 0;
+    const onHandAvg = inventory ? inventory.averageCostGBP : 0;
+    let blendedTotalQty = onHandQty;
+    let blendedTotalCost = onHandQty * onHandAvg;
+
+    if (remainingTransit.length > 0) {
+      for (const t of remainingTransit) {
+        const qty = Number(t.remainingquantity ?? 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue;
+
+        const poLine = poLinesById.get(t.polineid) || null;
+
+        let rawUnitCost = Number(t.unitcostgbp ?? 0);
+        if (!Number.isFinite(rawUnitCost) || rawUnitCost <= 0) {
+          rawUnitCost = Number(
+            poLine && typeof poLine.unitCostExVAT === 'number'
+              ? poLine.unitCostExVAT
+              : 0,
+          );
+        }
+
+        const unitCost = Number.isFinite(rawUnitCost) && rawUnitCost >= 0 ? rawUnitCost : 0;
+
+        blendedTotalQty += qty;
+        blendedTotalCost += qty * unitCost;
+      }
+    }
+
+    let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
+    if (blendedTotalQty > 0 && blendedTotalCost > 0) {
+      displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
+    }
+
+    if (inventory) {
+      inventory = { ...inventory, averageCostGBP: displayAverageCost };
+    } else if (displayAverageCost > 0) {
+      inventory = {
+        id: product.id,
+        productId: product.id,
+        quantityOnHand: 0,
+        averageCostGBP: displayAverageCost,
+        lastUpdated: product.updatedAt || product.createdAt,
+      } as any;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -237,6 +288,16 @@ export async function PUT(request: NextRequest) {
       updates.tags = body.tags;
     }
 
+    if (Array.isArray(body.aliases)) {
+      updates.aliases = body.aliases;
+    }
+
+    if ('imageUrl' in body) {
+      const raw = body.imageUrl;
+      const value = typeof raw === 'string' ? raw.trim() : '';
+      updates.imageurl = value.length > 0 ? value : null;
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: 'No valid fields provided for update' },
@@ -273,14 +334,91 @@ export async function PUT(request: NextRequest) {
       tags: updatedRow.tags ?? [],
       createdAt: updatedRow.created_at,
       updatedAt: updatedRow.updated_at,
-    };
-
+    }
     return NextResponse.json({ success: true, data: { product } });
   } catch (error) {
     console.error('Update product error:', error);
     return NextResponse.json(
       { error: 'Failed to update product' },
       { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const rawName = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!rawName) {
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 },
+      );
+    }
+
+    const normalizeOptionalString = (value: unknown): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    };
+
+    const toStringArray = (value: unknown): string[] => {
+      if (!Array.isArray(value)) return [];
+      return value
+        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .filter((v) => v.length > 0);
+    };
+
+    const insertPayload: any = {
+      name: rawName,
+      primarysku: normalizeOptionalString(body.primarySku),
+      suppliersku: normalizeOptionalString(body.supplierSku),
+      barcodes: toStringArray(body.barcodes),
+      aliases: toStringArray(body.aliases),
+      supplierid: normalizeOptionalString(body.supplierId) || null,
+      category: normalizeOptionalString(body.category),
+      tags: toStringArray(body.tags),
+      imageurl: normalizeOptionalString(body.imageUrl),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: newProduct, error } = await supabase
+      .from('products')
+      .insert(insertPayload)
+      .select('*')
+      .single();
+
+    if (error || !newProduct) {
+      console.error('Create product error:', error);
+      return NextResponse.json(
+        { error: 'Failed to create product' },
+        { status: 500 },
+      );
+    }
+
+    const product = {
+      id: newProduct.id,
+      name: newProduct.name,
+      primarySku: newProduct.primarysku ?? null,
+      supplierSku: newProduct.suppliersku ?? null,
+      barcodes: newProduct.barcodes ?? [],
+      aliases: newProduct.aliases ?? [],
+      supplierId: newProduct.supplierid ?? null,
+      category: newProduct.category ?? null,
+      tags: newProduct.tags ?? [],
+      imageUrl: newProduct.imageurl ?? null,
+      createdAt: newProduct.created_at,
+      updatedAt: newProduct.updated_at,
+    };
+
+    return NextResponse.json({ success: true, data: { product } });
+  } catch (error) {
+    console.error('Create product error:', error);
+    return NextResponse.json(
+      { error: 'Failed to create product' },
+      { status: 500 },
     );
   }
 }

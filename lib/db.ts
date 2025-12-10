@@ -293,6 +293,7 @@ export interface Product {
   supplierId: string | null;
   category: string | null;
   tags: string[];
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -652,6 +653,7 @@ export async function syncInventoryFromPurchaseOrder(params: {
           supplierid: params.supplierId,
           category: null,
           tags: [],
+          imageurl: null,
         })
         .select()
         .single();
@@ -703,16 +705,24 @@ export async function syncInventoryFromPurchaseOrder(params: {
 }
 
 // Get an inventory snapshot (products + on-hand + quantity in transit)
+// Average cost is derived primarily from what is currently on order (transit),
+// and only falls back to the stored inventory.averagecostgbp when nothing is in transit.
 export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
-  const [productsRes, inventoryRes, transitRes] = await Promise.all([
+  const [productsRes, inventoryRes, transitRes, poLinesRes] = await Promise.all([
     supabase.from('products').select('*'),
     supabase.from('inventory').select('*'),
     supabase.from('transit').select('*'),
+    supabase.from('polines').select('id, unitcostexvat, purchaseorderid'),
   ]);
 
   const rawProducts = productsRes.data || [];
   const rawInventory = inventoryRes.data || [];
   const rawTransit = transitRes.data || [];
+  const rawPoLines = poLinesRes.data || [];
+
+  const poLinesById = new Map<string, any>(
+    rawPoLines.map((l: any) => [l.id as string, l]),
+  );
 
   const typedProducts: Product[] = rawProducts.map((p: any) => ({
     id: p.id,
@@ -724,13 +734,15 @@ export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
     supplierId: p.supplierid ?? null,
     category: p.category ?? null,
     tags: p.tags ?? [],
+    imageUrl: p.imageurl ?? null,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
   }));
 
   const items: InventoryItemView[] = typedProducts.map((product) => {
     const invRow = rawInventory.find((i: any) => i.productid === product.id) || null;
-    const inventory: InventoryRecord | null = invRow
+
+    let inventory: InventoryRecord | null = invRow
       ? {
           id: invRow.id,
           productId: invRow.productid,
@@ -740,9 +752,58 @@ export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
         }
       : null;
 
-    const quantityInTransit = rawTransit
-      .filter((t: any) => t.productid === product.id && Number(t.remainingquantity ?? 0) > 0)
-      .reduce((sum: number, t: any) => sum + Number(t.remainingquantity ?? 0), 0);
+    const productTransit = rawTransit.filter((t: any) => t.productid === product.id);
+    const remainingTransit = productTransit.filter(
+      (t: any) => Number(t.remainingquantity ?? 0) > 0,
+    );
+
+    const quantityInTransit = remainingTransit.reduce(
+      (sum: number, t: any) => sum + Number(t.remainingquantity ?? 0),
+      0,
+    );
+
+    // Derive expected average unit cost from on-hand + what is currently on order (transit)
+    const onHandQty = inventory ? inventory.quantityOnHand : 0;
+    const onHandAvg = inventory ? inventory.averageCostGBP : 0;
+    let blendedTotalQty = onHandQty;
+    let blendedTotalCost = onHandQty * onHandAvg;
+
+    if (remainingTransit.length > 0) {
+      for (const t of remainingTransit) {
+        const qty = Number(t.remainingquantity ?? 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue;
+
+        const poLine = poLinesById.get(t.polineid as string) || null;
+
+        let rawUnitCost = Number(t.unitcostgbp ?? 0);
+        if (!Number.isFinite(rawUnitCost) || rawUnitCost <= 0) {
+          rawUnitCost = Number(poLine?.unitcostexvat ?? 0);
+        }
+
+        const unitCost = Number.isFinite(rawUnitCost) && rawUnitCost >= 0 ? rawUnitCost : 0;
+
+        blendedTotalQty += qty;
+        blendedTotalCost += qty * unitCost;
+      }
+    }
+
+    let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
+    if (blendedTotalQty > 0 && blendedTotalCost > 0) {
+      displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
+    }
+
+    if (inventory) {
+      inventory = { ...inventory, averageCostGBP: displayAverageCost };
+    } else if (displayAverageCost > 0) {
+      // No on-hand inventory yet, but we do have pricing from POs in transit.
+      inventory = {
+        id: product.id,
+        productId: product.id,
+        quantityOnHand: 0,
+        averageCostGBP: displayAverageCost,
+        lastUpdated: product.updatedAt || product.createdAt,
+      };
+    }
 
     return {
       product,
@@ -854,8 +915,10 @@ export async function receiveStockForProduct(params: {
     if (available <= 0) continue;
 
     const take = Math.min(remainingToReceive, available);
-    const unitCost =
-      typeof t.unitcostgbp === 'number' && t.unitcostgbp >= 0 ? Number(t.unitcostgbp) : 0;
+
+    // Supabase returns NUMERIC columns as strings; coerce to number safely
+    const rawUnitCost = Number(t.unitcostgbp);
+    const unitCost = Number.isFinite(rawUnitCost) && rawUnitCost >= 0 ? rawUnitCost : 0;
 
     incomingTotalValue += take * unitCost;
     receivedQuantity += take;
@@ -927,6 +990,24 @@ export async function addBarcodeToProduct(
     throw new Error('Barcode is too long');
   }
 
+  // Ensure this barcode is not already linked to another product
+  const { data: existingWithBarcode, error: lookupError } = await supabase
+    .from('products')
+    .select('id, name, barcodes')
+    .contains('barcodes', [trimmed]);
+
+  if (lookupError) {
+    throw new Error(`Failed to check existing barcodes: ${lookupError.message}`);
+  }
+
+  if (existingWithBarcode && existingWithBarcode.length > 0) {
+    const conflicting = existingWithBarcode.find((p: any) => p.id !== productId);
+    if (conflicting) {
+      const otherName = conflicting.name || conflicting.id;
+      throw new Error(`This barcode is already linked to another product: "${otherName}"`);
+    }
+  }
+
   // Get current product
   const { data: product } = await supabase
     .from('products')
@@ -944,7 +1025,7 @@ export async function addBarcodeToProduct(
       .from('products')
       .update({
         barcodes: [...currentBarcodes, trimmed],
-        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq('id', productId)
       .select()
