@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 
 interface Supplier {
@@ -97,6 +98,11 @@ interface ProductHistoryResponse {
   transit: TransitWithContext[];
 }
 
+const MobileBarcodeScanner = dynamic(
+  () => import('@/components/MobileBarcodeScanner'),
+  { ssr: false },
+);
+
 export default function ProductHistoryPage() {
   const params = useParams<{ productId: string }>();
   const router = useRouter();
@@ -121,6 +127,7 @@ export default function ProductHistoryPage() {
     imageUrl: '',
   });
   const [deleting, setDeleting] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -364,6 +371,77 @@ export default function ProductHistoryPage() {
       );
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleClearBarcodes = async () => {
+    if (!data) return;
+
+    if (!window.confirm('Clear all barcodes for this product?')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const res = await fetch(
+        `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ barcodes: [] }),
+        },
+      );
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        throw new Error((json && json.error) || 'Failed to clear barcodes');
+      }
+
+      const updated: Product = json.data.product;
+      setData((prev) => (prev ? { ...prev, product: updated } : prev));
+      setEditForm((prev) => ({
+        ...prev,
+        barcodes: '',
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear barcodes');
+    }
+  };
+
+  const handleScannedBarcode = async (code: string) => {
+    const raw = (code || '').trim();
+    setScannerOpen(false);
+    if (!raw || !data) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/inventory/add-barcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: data.product.id, barcode: raw }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        throw new Error((json && json.error) || 'Failed to add barcode');
+      }
+
+      const reloadRes = await fetch(
+        `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
+      );
+      const reloadJson = await reloadRes.json().catch(() => null);
+      if (reloadRes.ok && reloadJson && reloadJson.success) {
+        const nextData: ProductHistoryResponse = reloadJson.data;
+        setData(nextData);
+        if (nextData.product) {
+          setEditForm((prev) => ({
+            ...prev,
+            barcodes: (nextData.product.barcodes || []).join(', '),
+          }));
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add barcode');
     }
   };
 
@@ -639,7 +717,38 @@ export default function ProductHistoryPage() {
             <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-100 mb-4">QR & Barcode</h2>
               <div>
-                <p className="text-xs text-gray-400 mb-1">Barcodes</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-gray-400">Barcodes</p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setScannerOpen(true)}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] font-medium hover:bg-[#ff8c42] focus:outline-none focus:ring-1 focus:ring-[#ff6b35] sm:hidden"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 7h3M4 17h3M17 7h3M17 17h3M9 7h6M9 17h6M7 9v6M17 9v6"
+                        />
+                      </svg>
+                      Scan & add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearBarcodes}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-200 hover:bg-[#3a3a3a]"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
                 {editing ? (
                   <input
                     value={editForm.barcodes}
@@ -866,6 +975,13 @@ export default function ProductHistoryPage() {
           </button>
         </div>
       </div>
+
+      {scannerOpen && (
+        <MobileBarcodeScanner
+          onScan={handleScannedBarcode}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
     </div>
   );
 }

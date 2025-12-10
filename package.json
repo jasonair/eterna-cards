@@ -11,6 +11,8 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.84.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "next": "16.0.7",

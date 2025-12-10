@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
 interface Supplier {
@@ -53,6 +54,11 @@ interface Task {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+const MobileBarcodeScanner = dynamic(
+  () => import('@/components/MobileBarcodeScanner'),
+  { ssr: false },
+);
+
 export default function InventoryPage() {
   const router = useRouter();
 
@@ -83,11 +89,41 @@ export default function InventoryPage() {
   const [taskError, setTaskError] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const activeTasks = useMemo(
     () => tasks.filter((t) => !t.completed),
     [tasks],
   );
+
+  const handleScannedBarcode = (code: string) => {
+    const raw = (code || '').trim();
+    if (!raw) {
+      setScannerOpen(false);
+      return;
+    }
+
+    const normalized = raw.toLowerCase();
+
+    const matched = items.find((row) => {
+      const product = row.product;
+      const barcodes = Array.isArray(product.barcodes) ? product.barcodes : [];
+      if (barcodes.some((b) => b.toLowerCase() === normalized)) return true;
+      if (product.primarySku && product.primarySku.toLowerCase() === normalized) return true;
+      if (product.supplierSku && product.supplierSku.toLowerCase() === normalized) return true;
+      return false;
+    });
+
+    setScannerOpen(false);
+
+    if (matched) {
+      router.push(`/inventory/${matched.product.id}`);
+      return;
+    }
+
+    setSearch(raw);
+    showToast('No product found for scanned code. Showing search results instead.');
+  };
 
   const recentCompletedTasks = useMemo(
     () =>
@@ -880,16 +916,50 @@ export default function InventoryPage() {
 
           {/* Search & stats */}
           <div className="lg:col-span-3 space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">
-                Scan barcode or search by name / SKU
-              </label>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Scan barcode here or type to search..."
-                className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
-              />
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-300 mb-1">
+                  Scan barcode or search by name / SKU
+                </label>
+                <div className="relative">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Scan barcode here or type to search..."
+                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch('')}
+                      className="absolute inset-y-0 right-2 my-auto inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-gray-400 hover:text-gray-100 hover:bg-[#3a3a3a]"
+                      aria-label="Clear search"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                className="inline-flex items-center justify-center px-3 py-2 rounded-md bg-[#ff6b35] text-white text-xs font-medium hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-[#ff6b35] sm:hidden mt-5"
+              >
+                <svg
+                  className="w-4 h-4 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 7h3M4 17h3M17 7h3M17 17h3M9 7h6M9 17h6M7 9v6M17 9v6"
+                  />
+                </svg>
+                Scan
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -1402,6 +1472,13 @@ export default function InventoryPage() {
         <div className="fixed bottom-6 right-6 z-50 max-w-xs px-3 py-2 rounded-md bg-[#222222] border border-[#3a3a3a] text-xs text-gray-100 shadow-lg shadow-black/40">
           {toastMessage}
         </div>
+      )}
+
+      {scannerOpen && (
+        <MobileBarcodeScanner
+          onScan={handleScannedBarcode}
+          onClose={() => setScannerOpen(false)}
+        />
       )}
     </div>
   );

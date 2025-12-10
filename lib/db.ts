@@ -990,6 +990,24 @@ export async function addBarcodeToProduct(
     throw new Error('Barcode is too long');
   }
 
+  // Ensure this barcode is not already linked to another product
+  const { data: existingWithBarcode, error: lookupError } = await supabase
+    .from('products')
+    .select('id, name, barcodes')
+    .contains('barcodes', [trimmed]);
+
+  if (lookupError) {
+    throw new Error(`Failed to check existing barcodes: ${lookupError.message}`);
+  }
+
+  if (existingWithBarcode && existingWithBarcode.length > 0) {
+    const conflicting = existingWithBarcode.find((p: any) => p.id !== productId);
+    if (conflicting) {
+      const otherName = conflicting.name || conflicting.id;
+      throw new Error(`This barcode is already linked to another product: "${otherName}"`);
+    }
+  }
+
   // Get current product
   const { data: product } = await supabase
     .from('products')
@@ -1007,7 +1025,7 @@ export async function addBarcodeToProduct(
       .from('products')
       .update({
         barcodes: [...currentBarcodes, trimmed],
-        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq('id', productId)
       .select()
