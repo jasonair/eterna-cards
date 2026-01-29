@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findOrCreateSupplier, createPurchaseOrder, createPOLines, syncInventoryFromPurchaseOrder, createOrUpdateInvoiceForPurchaseOrder } from '@/lib/db';
+import { uploadInvoiceImages } from '@/lib/storage';
 
 interface SavePORequest {
   supplier: {
@@ -22,12 +23,31 @@ interface SavePORequest {
     unitCostExVAT: number;
     lineTotalExVAT: number;
   }>;
+  imageFiles?: File[];
 }
 
 // POST endpoint to save approved purchase order data
 export async function POST(request: NextRequest) {
   try {
-    const data: SavePORequest = await request.json();
+    const contentType = request.headers.get('content-type');
+    let data: SavePORequest;
+    let imageFiles: File[] = [];
+
+    if (contentType?.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const jsonData = formData.get('data') as string;
+      data = JSON.parse(jsonData);
+      
+      const fileCount = parseInt(formData.get('fileCount') as string || '0');
+      for (let i = 0; i < fileCount; i++) {
+        const file = formData.get(`file${i}`) as File;
+        if (file) {
+          imageFiles.push(file);
+        }
+      }
+    } else {
+      data = await request.json();
+    }
 
     // Validate required fields
     if (!data.supplier?.name) {
@@ -55,14 +75,33 @@ export async function POST(request: NextRequest) {
         vatNumber: data.supplier.vatNumber || null,
       });
 
-      // Create purchase order (always save as GBP since AI converts all prices)
+      // Create purchase order first (we need the ID for image upload)
       const purchaseOrderId = await createPurchaseOrder({
         supplierId,
         invoiceNumber: data.purchaseOrder.invoiceNumber || null,
         invoiceDate: data.purchaseOrder.invoiceDate || null,
         currency: 'GBP', // All prices are converted to GBP by AI
         paymentTerms: data.purchaseOrder.paymentTerms || null,
+        imageUrl: null,
+        imageUrls: null,
       });
+
+      // Upload images if provided
+      let imageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        try {
+          imageUrls = await uploadInvoiceImages(imageFiles, purchaseOrderId);
+          
+          // Update PO with image URLs
+          const { updatePurchaseOrder } = await import('@/lib/db');
+          await updatePurchaseOrder(purchaseOrderId, {
+            imageUrl: imageUrls[0] || null,
+            imageUrls: imageUrls,
+          });
+        } catch (uploadError) {
+          console.error('Failed to upload images:', uploadError);
+        }
+      }
 
       // Create or update invoice record linked to this purchase order
       const invoice = await createOrUpdateInvoiceForPurchaseOrder({

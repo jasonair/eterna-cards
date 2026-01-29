@@ -74,6 +74,7 @@ export default function InventoryPage() {
   const [barcodeProductId, setBarcodeProductId] = useState<string | null>(null);
   const [barcodeValue, setBarcodeValue] = useState('');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
@@ -993,10 +994,10 @@ export default function InventoryPage() {
                   <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
                 ) : (
                   <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
-                    {items.reduce(
-                      (sum, row) => sum + (row.inventory?.quantityOnHand || 0),
+                    £{items.reduce(
+                      (sum, row) => sum + ((row.inventory?.quantityOnHand || 0) * (row.inventory?.averageCostGBP || 0)),
                       0
-                    ).toLocaleString()}
+                    ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 )}
               </button>
@@ -1014,7 +1015,7 @@ export default function InventoryPage() {
                   <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
                 ) : (
                   <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
-                    {items.reduce((sum, row) => sum + (row.quantityInTransit || 0), 0).toLocaleString()}
+                    £{items.reduce((sum, row) => sum + ((row.quantityInTransit || 0) * (row.inventory?.averageCostGBP || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 )}
               </button>
@@ -1330,6 +1331,34 @@ export default function InventoryPage() {
                 ))}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="inline-flex rounded-lg border border-[#3a3a3a] bg-[#2a2a2a] p-0.5">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      viewMode === 'grid'
+                        ? 'bg-[#ff6b35] text-white'
+                        : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
+                    }`}
+                    title="Grid view"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      viewMode === 'table'
+                        ? 'bg-[#ff6b35] text-white'
+                        : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
+                    }`}
+                    title="Table view"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => router.push('/inventory/new')}
@@ -1347,6 +1376,145 @@ export default function InventoryPage() {
             ) : visibleItems.length === 0 ? (
               <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg p-8 text-center text-sm text-gray-300">
                 No products match this search or folder.
+              </div>
+            ) : viewMode === 'table' ? (
+              <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#3a3a3a]">
+                    <thead className="bg-[#1a1a1a]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Product
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Supplier
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          SKU
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          In Hand
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          In Transit
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Avg Cost
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Total Value
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#3a3a3a]">
+                      {visibleItems.map((row) => {
+                        const totalQty = (row.inventory?.quantityOnHand || 0) + (row.quantityInTransit || 0);
+                        const totalValue = totalQty * (row.inventory?.averageCostGBP || 0);
+                        return (
+                          <tr
+                            key={row.product.id}
+                            className="hover:bg-[#1a1a1a] cursor-pointer transition-colors"
+                            onClick={() => router.push(`/inventory/${row.product.id}`)}
+                          >
+                            <td className="px-4 py-3 text-sm text-gray-100">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-md bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-xs font-bold text-gray-200 uppercase flex-shrink-0">
+                                  {row.product.name
+                                    .split(' ')
+                                    .filter(Boolean)
+                                    .slice(0, 2)
+                                    .map((word) => word[0])
+                                    .join('')
+                                    .toUpperCase() || 'PR'}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-100 truncate">{row.product.name}</div>
+                                  {row.product.category && (
+                                    <div className="text-xs text-gray-400">{row.product.category}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-300">
+                              {row.supplier?.name || 'Unknown'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                              {row.product.primarySku || row.product.supplierSku || '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#1f2a1f] text-green-300 border border-green-500/40">
+                                {row.inventory?.quantityOnHand || 0}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#1f1f1f] text-gray-200 border border-[#3a3a3a]">
+                                {row.quantityInTransit || 0}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-100 text-right font-mono">
+                              £{(row.inventory?.averageCostGBP || 0).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-100 text-right font-mono">
+                              £{totalValue.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProduct(row.product);
+                                }}
+                                disabled={deletingProductId === row.product.id}
+                                className="inline-flex items-center justify-center p-1.5 rounded-md text-red-300 hover:bg-[#3a1f1f] disabled:opacity-50"
+                                aria-label="Delete product"
+                              >
+                                {deletingProductId === row.product.id ? (
+                                  <svg
+                                    className="animate-spin h-4 w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                ) : (
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">

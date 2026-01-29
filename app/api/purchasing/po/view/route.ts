@@ -64,6 +64,8 @@ export async function GET(request: NextRequest) {
           invoiceDate: po.invoicedate ?? null,
           currency: po.currency,
           paymentTerms: po.paymentterms ?? null,
+          imageUrl: po.imageurl ?? null,
+          imageUrls: po.imageurls ?? null,
           createdAt: po.created_at,
         }));
 

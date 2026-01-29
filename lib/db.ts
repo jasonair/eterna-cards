@@ -24,6 +24,8 @@ export interface PurchaseOrder {
   invoiceDate: string | null;
   currency: string;
   paymentTerms: string | null;
+  imageUrl: string | null;
+  imageUrls: string[] | null;
   createdAt: string;
 }
 
@@ -99,6 +101,8 @@ export async function createPurchaseOrder(
       invoicedate: poData.invoiceDate,
       currency: poData.currency,
       paymentterms: poData.paymentTerms,
+      imageurl: poData.imageUrl,
+      imageurls: poData.imageUrls,
     })
     .select('id')
     .single();
@@ -122,6 +126,8 @@ export async function updatePurchaseOrder(
   if (updates.invoiceDate !== undefined) mappedUpdates.invoicedate = updates.invoiceDate;
   if (updates.currency !== undefined) mappedUpdates.currency = updates.currency;
   if (updates.paymentTerms !== undefined) mappedUpdates.paymentterms = updates.paymentTerms;
+  if (updates.imageUrl !== undefined) mappedUpdates.imageurl = updates.imageUrl;
+  if (updates.imageUrls !== undefined) mappedUpdates.imageurls = updates.imageUrls;
 
   const { data, error } = await supabase
     .from('purchaseorders')
