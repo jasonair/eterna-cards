@@ -6,7 +6,9 @@ import {
   type Totals,
   syncInventoryFromPurchaseOrder,
   createOrUpdateInvoiceForPurchaseOrder,
+  updatePurchaseOrder,
 } from '@/lib/db';
+import { uploadInvoiceImages } from '@/lib/storage';
 
 // Gemini prompt for structured data extraction
 const EXTRACTION_PROMPT = `You are running inside the Google Gemini API.
@@ -100,6 +102,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Store original file for later upload
+    const originalFile = file;
 
     // Validate file type - images or PDF
     const isImage = file.type.startsWith('image/');
@@ -214,14 +219,31 @@ export async function POST(request: NextRequest) {
         vatNumber: extractedData.supplier.vatNumber,
       });
 
-      // Create purchase order (always store as GBP since AI converts)
+      // Create purchase order first (we need the ID for image upload)
       const purchaseOrderId = await createPurchaseOrder({
         supplierId,
         invoiceNumber: extractedData.purchaseOrder.invoiceNumber,
         invoiceDate: extractedData.purchaseOrder.invoiceDate,
         currency: 'GBP', // All prices are converted to GBP by AI
         paymentTerms: extractedData.purchaseOrder.paymentTerms,
+        imageUrl: null,
+        imageUrls: null,
       });
+
+      // Upload invoice image to Supabase Storage
+      let imageUrls: string[] = [];
+      try {
+        imageUrls = await uploadInvoiceImages([originalFile], purchaseOrderId);
+        
+        // Update PO with image URLs
+        await updatePurchaseOrder(purchaseOrderId, {
+          imageUrl: imageUrls[0] || null,
+          imageUrls: imageUrls,
+        });
+      } catch (uploadError) {
+        console.error('Failed to upload invoice image:', uploadError);
+        // Continue even if image upload fails
+      }
 
       // Create or update invoice record linked to this purchase order
       const invoice = await createOrUpdateInvoiceForPurchaseOrder({

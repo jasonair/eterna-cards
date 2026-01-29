@@ -21,6 +21,8 @@ interface PurchaseOrder {
   invoiceDate: string | null;
   currency: string;
   paymentTerms: string | null;
+  imageUrl: string | null;
+  imageUrls: string[] | null;
   createdAt: string;
 }
 
@@ -76,10 +78,27 @@ export default function ViewDataPage() {
   const [receivingLineId, setReceivingLineId] = useState<string | null>(null);
   const [receivingPOId, setReceivingPOId] = useState<string | null>(null);
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, string>>({});
+  const [statusFilter, setStatusFilter] = useState<'in_transit' | 'received'>('in_transit');
+  const [expandedImages, setExpandedImages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (editingPO) {
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [editingPO]);
 
   const fetchData = async () => {
     try {
@@ -157,6 +176,15 @@ export default function ViewDataPage() {
     }
 
     return { totalOrdered, totalReceived, totalRemaining };
+  };
+
+  const getPOStatus = (purchaseOrderId: string): 'received' | 'in_transit' => {
+    const summary = getPOReceiveSummary(purchaseOrderId);
+    return summary.totalRemaining <= 0 ? 'received' : 'in_transit';
+  };
+
+  const filterPOsByStatus = (pos: PurchaseOrder[]) => {
+    return pos.filter(po => getPOStatus(po.id) === statusFilter);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -644,6 +672,32 @@ export default function ViewDataPage() {
           </div>
         </div>
 
+        {/* Filter Toggle */}
+        <div className="mb-6">
+          <div className="inline-flex rounded-lg border border-[#3a3a3a] bg-[#2a2a2a] p-1">
+            <button
+              onClick={() => setStatusFilter('in_transit')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                statusFilter === 'in_transit'
+                  ? 'bg-[#ff6b35] text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
+              }`}
+            >
+              In Transit
+            </button>
+            <button
+              onClick={() => setStatusFilter('received')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                statusFilter === 'received'
+                  ? 'bg-[#ff6b35] text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
+              }`}
+            >
+              Received
+            </button>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
@@ -702,19 +756,22 @@ export default function ViewDataPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {Object.entries(groupPOsByMonth()).map(([month, pos]) => (
+            {Object.entries(groupPOsByMonth()).map(([month, pos]) => {
+              const filteredPOs = filterPOsByStatus(pos);
+              if (filteredPOs.length === 0) return null;
+              return (
               <div key={month} className="space-y-4">
                 {/* Month Header */}
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-bold text-gray-100">{month}</h2>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#3a3a3a] text-[#ff6b35]">
-                    {pos.length} PO{pos.length !== 1 ? 's' : ''}
+                    {filteredPOs.length} PO{filteredPOs.length !== 1 ? 's' : ''}
                   </span>
                 </div>
 
                 {/* POs for this month */}
                 <div className="space-y-6">
-                  {pos.map((po) => {
+                  {filteredPOs.map((po) => {
                     const lines = getPOLines(po.id);
                     const totalAmount = lines.reduce((sum, line) => sum + line.lineTotalExVAT, 0);
                     const receiveSummary = getPOReceiveSummary(po.id);
@@ -799,6 +856,56 @@ export default function ViewDataPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Invoice Images - Expandable */}
+                  {po.imageUrls && po.imageUrls.length > 0 && (
+                    <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#1a1a1a] border-b border-[#3a3a3a]">
+                      <button
+                        onClick={() => setExpandedImages(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
+                        className="flex items-center justify-between w-full text-left group"
+                      >
+                        <h4 className="text-xs sm:text-sm font-semibold text-gray-100 group-hover:text-[#ff6b35] transition-colors">
+                          Original Invoice Images ({po.imageUrls.length})
+                        </h4>
+                        <svg 
+                          className={`w-5 h-5 text-gray-400 transition-transform ${expandedImages[po.id] ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      
+                      {expandedImages[po.id] && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                          {po.imageUrls.map((imageUrl, idx) => (
+                            <a
+                              key={idx}
+                              href={imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative aspect-[3/4] bg-[#2a2a2a] rounded-lg overflow-hidden border-2 border-[#3a3a3a] hover:border-[#ff6b35] transition-colors"
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={`Invoice page ${idx + 1}`}
+                                className="w-full h-full object-contain"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                                <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                                <p className="text-xs text-white font-medium">Page {idx + 1}</p>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Line Items */}
                   <div className="px-3 sm:px-6 py-3 sm:py-4 overflow-hidden">
@@ -949,18 +1056,22 @@ export default function ViewDataPage() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>
 
       {/* Edit PO Modal */}
       {editingPO && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-4 mx-auto p-5 border border-[#3a3a3a] max-w-6xl w-full shadow-lg rounded-md bg-[#2a2a2a] max-h-[90vh] overflow-y-auto">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-medium text-gray-100">Edit Purchase Order</h3>
+        <div className="fixed inset-0 bg-black/70 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-3 sm:top-6 mx-auto w-[95vw] max-w-6xl border border-[#3a3a3a] shadow-lg rounded-xl bg-[#2a2a2a] max-h-[92vh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-100">Edit Purchase Order</h3>
+                  <p className="text-xs sm:text-sm text-gray-400">Update header details and line items before saving.</p>
+                </div>
                 <button
                   onClick={() => {
                     setEditingPO(null);
@@ -974,74 +1085,116 @@ export default function ViewDataPage() {
                 </button>
               </div>
 
-              {/* PO Header Fields */}
-              <div className="bg-[#1a1a1a] p-4 rounded-lg mb-6 border border-[#3a3a3a]">
-                <h4 className="text-lg font-medium text-gray-100 mb-4">Purchase Order Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Invoice Number
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.invoiceNumber}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                      className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
-                      placeholder="Enter invoice number"
-                    />
-                  </div>
+              {/* PO Header and Images Side-by-Side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+                {/* Left: PO Details */}
+                <div className="bg-[#1a1a1a] p-4 sm:p-5 rounded-xl border border-[#3a3a3a]">
+                  <h4 className="text-base sm:text-lg font-semibold text-gray-100 mb-4">Purchase Order Details</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Invoice Number
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.invoiceNumber}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                        placeholder="Enter invoice number"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Invoice Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editFormData.invoiceDate}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Invoice Date
+                      </label>
+                      <input
+                        type="date"
+                        value={editFormData.invoiceDate}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Currency
-                    </label>
-                    <select
-                      value={editFormData.currency}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, currency: e.target.value }))}
-                      className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                      <option value="CAD">CAD</option>
-                      <option value="AUD">AUD</option>
-                    </select>
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Currency
+                      </label>
+                      <select
+                        value={editFormData.currency}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, currency: e.target.value }))}
+                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                      >
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="CAD">CAD</option>
+                        <option value="AUD">AUD</option>
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Payment Terms
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.paymentTerms}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
-                      className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
-                      placeholder="e.g., Net 30, Due on Receipt"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Payment Terms
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.paymentTerms}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
+                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                        placeholder="e.g., Net 30, Due on Receipt"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Right: Invoice Images */}
+                {editingPO.imageUrls && editingPO.imageUrls.length > 0 ? (
+                  <div className="bg-[#1a1a1a] p-4 sm:p-5 rounded-xl border border-[#3a3a3a]">
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-100 mb-4">Original Invoice Images</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {editingPO.imageUrls.map((imageUrl, idx) => (
+                        <a
+                          key={idx}
+                          href={imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative aspect-[3/4] bg-[#2a2a2a] rounded-lg overflow-hidden border-2 border-[#3a3a3a] hover:border-[#ff6b35] transition-colors"
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`Invoice page ${idx + 1}`}
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                            <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                            <p className="text-xs text-white font-medium">Page {idx + 1}</p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#1a1a1a] p-4 sm:p-5 rounded-xl border border-[#3a3a3a] flex items-center justify-center">
+                    <p className="text-sm text-gray-400">No invoice images available</p>
+                  </div>
+                )}
               </div>
 
               {/* Line Items Section */}
-              <div className="bg-[#1a1a1a] border border-[#3a3a3a] rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-lg font-medium text-gray-100">Line Items</h4>
+              <div className="bg-[#1a1a1a] border border-[#3a3a3a] rounded-xl p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <div>
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-100">Line Items</h4>
+                    <p className="text-xs sm:text-sm text-gray-400">Edit quantities, prices, or remove lines.</p>
+                  </div>
                   <button
                     onClick={handleAddLineItem}
-                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
                   >
                     <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1050,7 +1203,82 @@ export default function ViewDataPage() {
                   </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="sm:hidden space-y-3">
+                  {editingLines.map((line) => (
+                    <div key={line.id} className="border border-[#3a3a3a] rounded-lg p-3 space-y-3 bg-[#1f1f1f]">
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                          Description
+                        </label>
+                        <input
+                          type="text"
+                          value={line.description}
+                          onChange={(e) => handleUpdateLineItem(line.id, 'description', e.target.value)}
+                          className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                          placeholder="Item description"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                            SKU
+                          </label>
+                          <input
+                            type="text"
+                            value={line.supplierSku || ''}
+                            onChange={(e) => handleUpdateLineItem(line.id, 'supplierSku', e.target.value || null)}
+                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            placeholder="SKU"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                            Quantity
+                          </label>
+                          <input
+                            type="number"
+                            value={line.quantity}
+                            onChange={(e) => handleUpdateLineItem(line.id, 'quantity', parseFloat(e.target.value) || 0)}
+                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            min="0"
+                            step="1"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                            Unit Price
+                          </label>
+                          <input
+                            type="number"
+                            value={line.unitCostExVAT}
+                            onChange={(e) => handleUpdateLineItem(line.id, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
+                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                            Total
+                          </label>
+                          <div className="px-2 py-2 border border-[#3a3a3a] rounded text-sm text-gray-100 bg-[#2a2a2a]">
+                            £{(line.lineTotalExVAT || 0).toFixed(2)} GBP
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveLineItem(line.id)}
+                        className="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-[#ff6b35] border border-[#3a3a3a] rounded-md hover:bg-[#2a2a2a]"
+                      >
+                        Remove Line Item
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden sm:block overflow-x-auto">
                   <table className="min-w-full divide-y divide-[#3a3a3a]">
                     <thead className="bg-[#2a2a2a]">
                       <tr>
@@ -1142,7 +1370,7 @@ export default function ViewDataPage() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
                 <button
                   onClick={() => {
                     setEditingPO(null);

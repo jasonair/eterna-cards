@@ -47,6 +47,8 @@ interface PurchaseOrder {
   invoiceDate: string | null;
   currency: string;
   paymentTerms: string | null;
+  imageUrl: string | null;
+  imageUrls: string[] | null;
   createdAt: string;
 }
 
@@ -840,11 +842,12 @@ export default function ProductHistoryPage() {
               <table className="min-w-full text-[11px] sm:text-sm divide-y divide-[#3a3a3a]">
                 <thead className="bg-[#1a1a1a]">
                   <tr>
-                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 whitespace-nowrap">PO / Invoice</th>
-                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 hidden sm:table-cell">Description</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Qty</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Rcvd</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Left</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400">PO</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 hidden sm:table-cell">Line</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 hidden md:table-cell">Invoice</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Ord</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Rcv</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400">Left</th>
                     <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Unit £</th>
                     <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Total</th>
                     <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400">Status</th>
@@ -912,6 +915,40 @@ export default function ProductHistoryPage() {
                             <p className="text-gray-400 font-mono">
                               {row.poLine.supplierSku}
                             </p>
+                          )}
+                        </td>
+                        <td className="px-2 sm:px-3 py-2 align-top hidden md:table-cell">
+                          {po?.imageUrls && po.imageUrls.length > 0 ? (
+                            <div className="flex gap-1">
+                              {po.imageUrls.slice(0, 2).map((imageUrl, idx) => (
+                                <a
+                                  key={idx}
+                                  href={imageUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group relative w-12 h-16 bg-[#2a2a2a] rounded border border-[#3a3a3a] hover:border-[#ff6b35] overflow-hidden transition-colors"
+                                  title={`View invoice page ${idx + 1}`}
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Invoice ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                  </div>
+                                </a>
+                              ))}
+                              {po.imageUrls.length > 2 && (
+                                <div className="flex items-center justify-center w-12 h-16 bg-[#2a2a2a] rounded border border-[#3a3a3a] text-[10px] text-gray-400">
+                                  +{po.imageUrls.length - 2}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 text-xs">-</span>
                           )}
                         </td>
                         <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">

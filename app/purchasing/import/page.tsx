@@ -265,12 +265,21 @@ function ImportPageContent() {
     setSavingIndex(resultIndex);
 
     try {
+      // Get the files for this group
+      const group = fileGroups.find(g => g.id === groupId);
+      const files = group?.files || [];
+
+      // Create FormData to include both data and files
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(data));
+      formData.append('fileCount', files.length.toString());
+      files.forEach((file, index) => {
+        formData.append(`file${index}`, file);
+      });
+
       const response = await fetch('/api/purchasing/po/save', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: formData,
       });
 
       const result = await response.json();
@@ -279,16 +288,13 @@ function ImportPageContent() {
         throw new Error(result.error || 'Failed to save purchase order');
       }
 
-      // Mark the PO as successfully saved
-      setGroupResults(prev =>
-        prev.map((result) =>
-          result.group.id === groupId ? { ...result, status: 'success' as const } : result
-        )
-      );
-
       // Show success message
       const supplierName = data.supplier.name;
       setSuccessMessage(`Purchase order for ${supplierName} saved successfully!`);
+      
+      // Remove the file group and result after successful save
+      setFileGroups(prev => prev.filter(g => g.id !== groupId));
+      setGroupResults(prev => prev.filter(r => r.group.id !== groupId));
       
       // Auto-hide success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
