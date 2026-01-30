@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       invoiceDate: poData.invoiceDate || null,
       currency: poData.currency,
       paymentTerms: poData.paymentTerms || null,
+      imageUrl: null,
+      imageUrls: [],
     });
 
     return NextResponse.json({
