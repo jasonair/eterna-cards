@@ -56,6 +56,7 @@ export async function GET() {
       quantity: Number(line.quantity) || 0,
       unitCostExVAT: Number(line.unitcostexvat) || 0,
       lineTotalExVAT: Number(line.linetotalexvat) || 0,
+      rrp: line.rrp != null ? Number(line.rrp) : null,
     }));
 
     const poIdsWithTransit = new Set(

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const { data, error } = await supabase
       .from('folders')
       .select('id, parentid, name, description, sort_order, created_at, updated_at')
+      .eq('user_id', user.id)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
 
@@ -23,6 +25,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const body = await request.json();
     const rawName = (body?.name as string | undefined) ?? '';
     const name = rawName.trim();
@@ -35,6 +38,7 @@ export async function POST(request: NextRequest) {
     const { data: existing, error: existingError } = await supabase
       .from('folders')
       .select('id, name')
+      .eq('user_id', user.id)
       .ilike('name', name)
       .maybeSingle();
 
@@ -52,6 +56,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         parentid: parentId,
+        user_id: user.id,
       })
       .select('id, parentid, name, description, sort_order, created_at, updated_at')
       .single();
@@ -70,6 +75,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const body = await request.json();
     const id = (body?.id as string | undefined) ?? undefined;
     const parentId = (body?.parentId as string | null | undefined) ?? null;
@@ -84,6 +90,7 @@ export async function PATCH(request: NextRequest) {
         parentid: parentId,
       })
       .eq('id', id)
+      .eq('user_id', user.id)
       .select('id, parentid, name, description, sort_order, created_at, updated_at')
       .single();
 
@@ -101,6 +108,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
@@ -108,7 +116,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const { error } = await supabase.from('folders').delete().eq('id', id);
+    const { error } = await supabase.from('folders').delete().eq('id', id).eq('user_id', user.id);
 
     if (error) {
       console.error('Delete folder error:', error);

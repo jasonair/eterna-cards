@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
+import { authenticatedFetch } from '@/lib/api-client';
 
 interface Supplier {
   id: string;
@@ -138,7 +139,7 @@ export default function ProductHistoryPage() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`/api/inventory/product?id=${encodeURIComponent(productId)}`);
+        const res = await authenticatedFetch(`/api/inventory/product?id=${encodeURIComponent(productId)}`);
         const json = await res.json();
         if (!res.ok || !json.success) {
           throw new Error(json.error || 'Failed to load product history');
@@ -240,7 +241,7 @@ export default function ProductHistoryPage() {
         imageUrl: editForm.imageUrl.trim() || null,
       };
 
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
         {
           method: 'PUT',
@@ -297,7 +298,7 @@ export default function ProductHistoryPage() {
       });
 
       for (const update of updates) {
-        const res = await fetch(
+        const res = await authenticatedFetch(
           `/api/purchasing/po/lines?id=${encodeURIComponent(update.id)}`,
           {
             method: 'PUT',
@@ -317,7 +318,7 @@ export default function ProductHistoryPage() {
       }
 
       if (updates.length > 0) {
-        const res = await fetch(
+        const res = await authenticatedFetch(
           `/api/inventory/product?id=${encodeURIComponent(productId)}`,
         );
         const json = await res.json();
@@ -354,7 +355,7 @@ export default function ProductHistoryPage() {
       setDeleting(true);
       setError(null);
 
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
         {
           method: 'DELETE',
@@ -385,7 +386,7 @@ export default function ProductHistoryPage() {
 
     try {
       setError(null);
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
         {
           method: 'PUT',
@@ -418,7 +419,7 @@ export default function ProductHistoryPage() {
     }
 
     try {
-      const res = await fetch('/api/inventory/add-barcode', {
+      const res = await authenticatedFetch('/api/inventory/add-barcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: data.product.id, barcode: raw }),
@@ -428,7 +429,7 @@ export default function ProductHistoryPage() {
         throw new Error((json && json.error) || 'Failed to add barcode');
       }
 
-      const reloadRes = await fetch(
+      const reloadRes = await authenticatedFetch(
         `/api/inventory/product?id=${encodeURIComponent(data.product.id)}`,
       );
       const reloadJson = await reloadRes.json().catch(() => null);

@@ -3,6 +3,7 @@
 import { Suspense, useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import PurchaseOrderForm from '../../../components/PurchaseOrderForm';
+import { authenticatedFetch } from '@/lib/api-client';
 
 interface FileGroup {
   id: string;
@@ -30,6 +31,7 @@ interface ExtractedData {
     quantity: number;
     unitCostExVAT: number;
     lineTotalExVAT: number;
+    rrp?: number;
   }>;
   totals: {
     subtotal?: number;
@@ -37,6 +39,7 @@ interface ExtractedData {
     vat?: number;
     total?: number;
   };
+  notes?: string;
 }
 
 interface DuplicateMatch {
@@ -277,7 +280,7 @@ function ImportPageContent() {
         formData.append(`file${index}`, file);
       });
 
-      const response = await fetch('/api/purchasing/po/save', {
+      const response = await authenticatedFetch('/api/purchasing/po/save', {
         method: 'POST',
         body: formData,
       });
@@ -321,7 +324,7 @@ function ImportPageContent() {
     setManualSaving(true);
 
     try {
-      const response = await fetch('/api/purchasing/po/save', {
+      const response = await authenticatedFetch('/api/purchasing/po/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -387,6 +390,7 @@ function ImportPageContent() {
       quantity: 0,
       unitCostExVAT: 0,
       lineTotalExVAT: 0,
+      rrp: null,
     });
 
     setEditedData(prev => ({ ...prev, [resultIndex]: updated }));
@@ -421,7 +425,7 @@ function ImportPageContent() {
       formData.append('groupName', group.name);
 
       // Send to extract API
-      const response = await fetch('/api/purchasing/po/extract', {
+      const response = await authenticatedFetch('/api/purchasing/po/extract', {
         method: 'POST',
         body: formData,
       });
@@ -459,7 +463,7 @@ function ImportPageContent() {
             )
           );
         } else {
-          const duplicateResponse = await fetch('/api/purchasing/po/check-duplicates', {
+          const duplicateResponse = await authenticatedFetch('/api/purchasing/po/check-duplicates', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1098,6 +1102,18 @@ function ImportPageContent() {
                           />
                         </div>
                       </div>
+                      
+                      {/* Notes Field */}
+                      <div className="mt-4">
+                        <label className="block text-xs font-semibold text-gray-300 mb-1">Notes</label>
+                        <textarea
+                          value={getEditableData(index)?.notes || ''}
+                          onChange={(e) => updateField(index, 'notes', e.target.value)}
+                          rows={3}
+                          placeholder="Add notes or special instructions for receiving and booking in stock"
+                          className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                        />
+                      </div>
                     </div>
 
                     {/* Line Items Table */}
@@ -1125,6 +1141,7 @@ function ImportPageContent() {
                               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-24">Qty</th>
                               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-32">Unit Price</th>
                               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-32">Line Total</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-32">RRP</th>
                               <th className="px-3 py-2 w-10"></th>
                             </tr>
                           </thead>
@@ -1170,6 +1187,16 @@ function ImportPageContent() {
                                     step="0.01"
                                     value={line.lineTotalExVAT}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'lineTotalExVAT', parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={line.rrp || ''}
+                                    onChange={(e) => updateLineItem(index, lineIndex, 'rrp', parseFloat(e.target.value) || null)}
+                                    placeholder="Optional"
                                     className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
                                   />
                                 </td>

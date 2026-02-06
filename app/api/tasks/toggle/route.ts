@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const body = await request.json();
     const id = body?.id as string | undefined;
     const explicitCompleted = body?.completed as boolean | undefined;

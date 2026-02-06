@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
+import { authenticatedFetch } from '@/lib/api-client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -23,6 +26,7 @@ interface PurchaseOrder {
   paymentTerms: string | null;
   imageUrl: string | null;
   imageUrls: string[] | null;
+  notes: string | null;
   createdAt: string;
 }
 
@@ -34,6 +38,7 @@ interface POLine {
   quantity: number;
   unitCostExVAT: number;
   lineTotalExVAT: number;
+  rrp: number | null;
 }
 
 type TransitStatus = 'in_transit' | 'partially_received' | 'received';
@@ -80,6 +85,8 @@ export default function ViewDataPage() {
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, string>>({});
   const [statusFilter, setStatusFilter] = useState<'in_transit' | 'received'>('in_transit');
   const [expandedImages, setExpandedImages] = useState<Record<string, boolean>>({});
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<{poId: string, notes: string, supplierName: string, invoiceNumber: string} | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -103,7 +110,7 @@ export default function ViewDataPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/purchasing/po/view');
+      const response = await authenticatedFetch('/api/purchasing/po/view');
 
       if (!response.ok) {
         throw new Error('Failed to fetch data');
@@ -323,7 +330,7 @@ export default function ViewDataPage() {
 
     setDeleting(poId);
     try {
-      const response = await fetch(`/api/purchasing/po/delete?id=${poId}`, {
+      const response = await authenticatedFetch(`/api/purchasing/po/delete?id=${poId}`, {
         method: 'DELETE',
       });
 
@@ -358,7 +365,7 @@ export default function ViewDataPage() {
     setSaving(true);
     try {
       // 1. Update the PO itself
-      const poResponse = await fetch(`/api/purchasing/po/update?id=${editingPO.id}`, {
+      const poResponse = await authenticatedFetch(`/api/purchasing/po/update?id=${editingPO.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -392,14 +399,14 @@ export default function ViewDataPage() {
 
       // Delete removed lines
       for (const lineId of linesToDelete) {
-        await fetch(`/api/purchasing/po/lines?id=${lineId}`, {
+        await authenticatedFetch(`/api/purchasing/po/lines?id=${lineId}`, {
           method: 'DELETE',
         });
       }
 
       // Add new lines
       for (const line of linesToAdd) {
-        await fetch('/api/purchasing/po/lines/add', {
+        await authenticatedFetch('/api/purchasing/po/lines/add', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -410,7 +417,7 @@ export default function ViewDataPage() {
 
       // Update modified lines
       for (const line of linesToUpdate) {
-        await fetch(`/api/purchasing/po/lines?id=${line.id}`, {
+        await authenticatedFetch(`/api/purchasing/po/lines?id=${line.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -445,6 +452,7 @@ export default function ViewDataPage() {
       quantity: 1,
       unitCostExVAT: 0,
       lineTotalExVAT: 0,
+      rrp: null,
     };
     setEditingLines(prev => [...prev, newLine]);
   };
@@ -511,7 +519,7 @@ export default function ViewDataPage() {
           continue;
         }
 
-        const res = await fetch('/api/inventory/receive-line', {
+        const res = await authenticatedFetch('/api/inventory/receive-line', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -576,7 +584,7 @@ export default function ViewDataPage() {
 
     try {
       setReceivingLineId(line.id);
-      const res = await fetch('/api/inventory/receive-line', {
+      const res = await authenticatedFetch('/api/inventory/receive-line', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -599,6 +607,22 @@ export default function ViewDataPage() {
     }
   };
 
+  const handleShowNotes = (po: PurchaseOrder) => {
+    if (po.notes && po.notes.trim()) {
+      setSelectedNotes({
+        poId: po.id,
+        notes: po.notes,
+        supplierName: getSupplierName(po.supplierId),
+        invoiceNumber: po.invoiceNumber || 'N/A'
+      });
+      setShowNotesModal(true);
+    }
+  };
+
+  const handleCloseNotesModal = () => {
+    setShowNotesModal(false);
+    setSelectedNotes(null);
+  };
 
   if (loading && !data) {
     return (
@@ -800,6 +824,17 @@ export default function ViewDataPage() {
                           <p className="text-white/80 text-[10px] sm:text-sm">ex VAT (GBP)</p>
                         </div>
                         <div className="flex gap-1 sm:gap-2">
+                          {po.notes && po.notes.trim() && (
+                            <button
+                              onClick={() => handleShowNotes(po)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                              title="View Notes"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEdit(po)}
                             className="bg-[#3a3a3a] hover:bg-[#4a4a4a] text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -931,6 +966,9 @@ export default function ViewDataPage() {
                             <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                               Unit
                             </th>
+                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                              RRP
+                            </th>
                             <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                               Total
                             </th>
@@ -1025,6 +1063,9 @@ export default function ViewDataPage() {
                                 </td>
                                 <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.unitCostExVAT, po.currency)}
+                                </td>
+                                <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
+                                  {line.rrp ? formatCurrency(line.rrp, po.currency) : '-'}
                                 </td>
                                 <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.lineTotalExVAT, po.currency)}
@@ -1261,11 +1302,25 @@ export default function ViewDataPage() {
                         </div>
                         <div>
                           <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
-                            Total
+                            RRP
                           </label>
-                          <div className="px-2 py-2 border border-[#3a3a3a] rounded text-sm text-gray-100 bg-[#2a2a2a]">
-                            £{(line.lineTotalExVAT || 0).toFixed(2)} GBP
-                          </div>
+                          <input
+                            type="number"
+                            value={line.rrp || ''}
+                            onChange={(e) => handleUpdateLineItem(line.id, 'rrp', parseFloat(e.target.value) || null)}
+                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            min="0"
+                            step="0.01"
+                            placeholder="Optional"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                          Total
+                        </label>
+                        <div className="px-2 py-2 border border-[#3a3a3a] rounded text-sm text-gray-100 bg-[#2a2a2a]">
+                          £{(line.lineTotalExVAT || 0).toFixed(2)} GBP
                         </div>
                       </div>
                       <button
@@ -1293,6 +1348,9 @@ export default function ViewDataPage() {
                         </th>
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                           Unit Price
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          RRP
                         </th>
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                           Total
@@ -1341,6 +1399,17 @@ export default function ViewDataPage() {
                               className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
                               min="0"
                               step="0.01"
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <input
+                              type="number"
+                              value={line.rrp || ''}
+                              onChange={(e) => handleUpdateLineItem(line.id, 'rrp', parseFloat(e.target.value) || null)}
+                              className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                              min="0"
+                              step="0.01"
+                              placeholder="Optional"
                             />
                           </td>
                           <td className="px-3 py-3 text-sm font-medium text-gray-100">
@@ -1478,6 +1547,48 @@ export default function ViewDataPage() {
                   Export {selectedMonths.length > 0 && `(${selectedMonths.length} month${selectedMonths.length !== 1 ? 's' : ''})`}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes Modal */}
+      {showNotesModal && selectedNotes && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#2a2a2a] rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-[#3a3a3a]">
+            <div className="flex items-center justify-between p-6 border-b border-[#3a3a3a]">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-100">Purchase Order Notes</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  {selectedNotes.supplierName} - {selectedNotes.invoiceNumber}
+                </p>
+              </div>
+              <button
+                onClick={handleCloseNotesModal}
+                className="text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#3a3a3a]">
+                <h4 className="text-sm font-semibold text-gray-300 mb-3">Notes & Instructions</h4>
+                <div className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
+                  {selectedNotes.notes}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end p-6 border-t border-[#3a3a3a]">
+              <button
+                onClick={handleCloseNotesModal}
+                className="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

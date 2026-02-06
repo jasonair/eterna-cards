@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 import { getOrSetCache } from '@/lib/cache';
 
 const CACHE_KEY = 'purchasing_po_view_v1';
@@ -8,43 +8,57 @@ const CACHE_TTL_MS = 1000 * 60 * 5; // 5 minutes
 // GET endpoint to retrieve all database data
 export async function GET(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const forceRefresh = request.nextUrl.searchParams.get('refresh') === 'true';
     const payload = await getOrSetCache(
-      CACHE_KEY,
+      `${CACHE_KEY}_${user.id}`, // User-specific cache key
       CACHE_TTL_MS,
       async () => {
-        // Fetch all related data from Supabase
-        const [suppliersRaw, purchaseOrdersRaw, poLinesRaw, productsRaw, inventoryRaw, transitRaw, invoicesRaw] =
+        // Fetch tables that have user_id column
+        const [suppliersRaw, purchaseOrdersRaw, productsRaw, inventoryRaw, transitRaw, invoicesRaw] =
           await Promise.all([
             supabase
               .from('suppliers')
               .select('*')
+              .eq('user_id', user.id)
               .then(({ data }) => data || []),
             supabase
               .from('purchaseorders')
               .select('*')
-              .then(({ data }) => data || []),
-            supabase
-              .from('polines')
-              .select('*')
+              .eq('user_id', user.id)
               .then(({ data }) => data || []),
             supabase
               .from('products')
               .select('*')
+              .eq('user_id', user.id)
               .then(({ data }) => data || []),
             supabase
               .from('inventory')
               .select('*')
+              .eq('user_id', user.id)
               .then(({ data }) => data || []),
             supabase
               .from('transit')
               .select('*')
+              .eq('user_id', user.id)
               .then(({ data }) => data || []),
             supabase
               .from('invoices')
               .select('*')
+              .eq('user_id', user.id)
               .then(({ data }) => data || []),
           ]);
+
+        // polines doesn't have user_id - filter by user's purchase order IDs
+        const poIds = purchaseOrdersRaw.map((po: any) => po.id);
+        let poLinesRaw: any[] = [];
+        if (poIds.length > 0) {
+          const { data } = await supabase
+            .from('polines')
+            .select('*')
+            .in('purchaseorderid', poIds);
+          poLinesRaw = data || [];
+        }
 
         // Map DB rows to the exact shapes the frontend expects (camelCase fields)
         const suppliers = suppliersRaw.map((s: any) => ({
@@ -66,6 +80,7 @@ export async function GET(request: NextRequest) {
           paymentTerms: po.paymentterms ?? null,
           imageUrl: po.imageurl ?? null,
           imageUrls: po.imageurls ?? null,
+          notes: po.notes ?? null,
           createdAt: po.created_at,
         }));
 
@@ -77,6 +92,7 @@ export async function GET(request: NextRequest) {
           quantity: Number(l.quantity ?? 0),
           unitCostExVAT: Number(l.unitcostexvat ?? 0),
           lineTotalExVAT: Number(l.linetotalexvat ?? 0),
+          rrp: l.rrp != null ? Number(l.rrp) : null,
         }));
 
         const products = productsRaw.map((p: any) => ({
@@ -141,7 +157,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(payload);
   } catch (error) {
-    console.error('Database read error:', error);
+    console.error('API error:', error);
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to read database' },
       { status: 500 }

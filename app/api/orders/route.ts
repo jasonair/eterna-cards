@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const { user, supabase } = await requireAuth(request);
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get('channel');
   const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
       processed_at,
       created_at
     `)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findOrCreateSupplier } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -7,6 +8,7 @@ export const runtime = 'nodejs';
 // POST endpoint to create a new supplier
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await requireAuth(request);
     const supplierData = await request.json();
 
     // Validate required fields
@@ -24,6 +26,7 @@ export async function POST(request: NextRequest) {
       email: supplierData.email || null,
       phone: supplierData.phone || null,
       vatNumber: supplierData.vatNumber || null,
+      user_id: user.id,
     });
 
     return NextResponse.json({

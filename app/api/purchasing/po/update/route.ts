@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updatePurchaseOrder } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 // PUT endpoint to update a purchase order
 export async function PUT(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const { searchParams } = new URL(request.url);
     const poId = searchParams.get('id');
 
@@ -21,7 +22,7 @@ export async function PUT(request: NextRequest) {
     const updates = await request.json();
 
     // Validate the updates (basic validation)
-    const allowedFields = ['supplierId', 'invoiceNumber', 'invoiceDate', 'currency', 'paymentTerms'];
+    const allowedFields = ['supplierId', 'invoiceNumber', 'invoiceDate', 'currency', 'paymentTerms', 'notes'];
     const invalidFields = Object.keys(updates).filter(field => !allowedFields.includes(field));
 
     if (invalidFields.length > 0) {
@@ -31,10 +32,25 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update the PO
-    const updatedPO = await updatePurchaseOrder(poId, updates);
+    // Map camelCase fields to DB column names
+    const mappedUpdates: Record<string, any> = {};
+    if (updates.supplierId !== undefined) mappedUpdates.supplierid = updates.supplierId;
+    if (updates.invoiceNumber !== undefined) mappedUpdates.invoicenumber = updates.invoiceNumber;
+    if (updates.invoiceDate !== undefined) mappedUpdates.invoicedate = updates.invoiceDate;
+    if (updates.currency !== undefined) mappedUpdates.currency = updates.currency;
+    if (updates.paymentTerms !== undefined) mappedUpdates.paymentterms = updates.paymentTerms;
+    if (updates.notes !== undefined) mappedUpdates.notes = updates.notes;
 
-    if (!updatedPO) {
+    // Update the PO using the authenticated supabase client
+    const { data, error } = await supabase
+      .from('purchaseorders')
+      .update(mappedUpdates)
+      .eq('id', poId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Update PO DB error:', error);
       return NextResponse.json(
         { error: 'Purchase order not found' },
         { status: 404 }
@@ -44,7 +60,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Purchase order updated successfully',
-      data: updatedPO,
+      data,
     });
   } catch (error) {
     console.error('Update PO error:', error);

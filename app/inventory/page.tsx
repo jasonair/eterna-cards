@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
+import { authenticatedFetch } from '@/lib/api-client';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
@@ -143,7 +146,7 @@ export default function InventoryPage() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch('/api/inventory/snapshot');
+        const res = await authenticatedFetch('/api/inventory/snapshot');
         const json = await res.json();
         if (!res.ok || !json.success) {
           throw new Error(json.error || 'Failed to load inventory');
@@ -164,7 +167,7 @@ export default function InventoryPage() {
       try {
         setTasksLoading(true);
         setTaskError(null);
-        const res = await fetch('/api/tasks');
+        const res = await authenticatedFetch('/api/tasks');
         const json = await res.json();
         if (!res.ok || !json.success) {
           throw new Error(json.error || 'Failed to load tasks');
@@ -183,7 +186,7 @@ export default function InventoryPage() {
   useEffect(() => {
     const loadFolders = async () => {
       try {
-        const res = await fetch('/api/folders');
+        const res = await authenticatedFetch('/api/folders');
         const json = await res.json();
         if (!res.ok || !json.success) {
           // eslint-disable-next-line no-console
@@ -421,7 +424,7 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/inventory/snapshot');
+      const res = await authenticatedFetch('/api/inventory/snapshot');
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Failed to load inventory');
@@ -444,7 +447,7 @@ export default function InventoryPage() {
 
     try {
       setBarcodeLoading(true);
-      const res = await fetch('/api/inventory/add-barcode', {
+      const res = await authenticatedFetch('/api/inventory/add-barcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: barcodeProductId, barcode: code }),
@@ -474,7 +477,7 @@ export default function InventoryPage() {
 
     try {
       setDeletingProductId(product.id);
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/inventory/product?id=${encodeURIComponent(product.id)}`,
         {
           method: 'DELETE',
@@ -498,7 +501,7 @@ export default function InventoryPage() {
 
     try {
       setTaskError(null);
-      const res = await fetch('/api/tasks', {
+      const res = await authenticatedFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
@@ -517,7 +520,7 @@ export default function InventoryPage() {
   const handleToggleTask = async (task: Task) => {
     try {
       setTaskError(null);
-      const res = await fetch('/api/tasks/toggle', {
+      const res = await authenticatedFetch('/api/tasks/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: task.id }),
@@ -581,7 +584,7 @@ export default function InventoryPage() {
       }
 
       const parentId = createFolderParentId;
-      const res = await fetch('/api/folders', {
+      const res = await authenticatedFetch('/api/folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, parentId }),
@@ -621,7 +624,7 @@ export default function InventoryPage() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/folders?id=${encodeURIComponent(folder.dbId || folderId)}`,
         {
           method: 'DELETE',
@@ -693,7 +696,7 @@ export default function InventoryPage() {
   const handleAssignProductToFolder = async (productId: string, folderId: string) => {
     try {
       const targetCategory = folderId === 'all' ? '' : folderId;
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/inventory/product?id=${encodeURIComponent(productId)}`,
         {
           method: 'PUT',
@@ -750,7 +753,7 @@ export default function InventoryPage() {
     }
 
     try {
-      const res = await fetch('/api/folders', {
+      const res = await authenticatedFetch('/api/folders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: folderDbId, parentId: targetFolderDbId }),

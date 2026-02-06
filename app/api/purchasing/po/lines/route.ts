@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updatePOLine, deletePOLine, createPOLines } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 // PUT endpoint to update a line item
 export async function PUT(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const { searchParams } = new URL(request.url);
     const lineId = searchParams.get('id');
 
@@ -21,7 +22,7 @@ export async function PUT(request: NextRequest) {
     const updates = await request.json();
 
     // Validate the updates (basic validation)
-    const allowedFields = ['description', 'supplierSku', 'quantity', 'unitCostExVAT', 'lineTotalExVAT'];
+    const allowedFields = ['description', 'supplierSku', 'quantity', 'unitCostExVAT', 'lineTotalExVAT', 'rrp'];
     const invalidFields = Object.keys(updates).filter(field => !allowedFields.includes(field));
 
     if (invalidFields.length > 0) {
@@ -31,10 +32,24 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update the line item
-    const updatedLine = await updatePOLine(lineId, updates);
+    // Map camelCase fields to DB column names
+    const mappedUpdates: Record<string, any> = {};
+    if (updates.description !== undefined) mappedUpdates.description = updates.description;
+    if (updates.supplierSku !== undefined) mappedUpdates.suppliersku = updates.supplierSku;
+    if (updates.quantity !== undefined) mappedUpdates.quantity = updates.quantity;
+    if (updates.unitCostExVAT !== undefined) mappedUpdates.unitcostexvat = updates.unitCostExVAT;
+    if (updates.lineTotalExVAT !== undefined) mappedUpdates.linetotalexvat = updates.lineTotalExVAT;
+    if (updates.rrp !== undefined) mappedUpdates.rrp = updates.rrp;
 
-    if (!updatedLine) {
+    const { data, error } = await supabase
+      .from('polines')
+      .update(mappedUpdates)
+      .eq('id', lineId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Update PO line DB error:', error);
       return NextResponse.json(
         { error: 'Line item not found' },
         { status: 404 }
@@ -44,7 +59,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Line item updated successfully',
-      data: updatedLine,
+      data,
     });
   } catch (error) {
     console.error('Update line item error:', error);
@@ -58,6 +73,7 @@ export async function PUT(request: NextRequest) {
 // DELETE endpoint to remove a line item
 export async function DELETE(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const { searchParams } = new URL(request.url);
     const lineId = searchParams.get('id');
 
@@ -68,10 +84,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete the line item
-    const deleted = await deletePOLine(lineId);
+    const { error } = await supabase
+      .from('polines')
+      .delete()
+      .eq('id', lineId);
 
-    if (!deleted) {
+    if (error) {
+      console.error('Delete PO line DB error:', error);
       return NextResponse.json(
         { error: 'Line item not found' },
         { status: 404 }
