@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
   href: string;
@@ -148,6 +149,11 @@ function isActivePath(pathname: string | null, href: string) {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <aside
@@ -227,6 +233,37 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               );
             })}
           </nav>
+        </div>
+
+        {/* Bottom: User profile */}
+        <div className="flex flex-col items-center w-full px-3">
+          <div className="w-full border-t border-[#2a2a2a] pt-4">
+            {user && (
+              <div className="flex flex-col items-center gap-2">
+                {!collapsed && (
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                      {user.email}
+                    </p>
+                  </div>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  className={`flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-[#242424] transition-colors ${
+                    collapsed ? 'w-9 h-9 rounded-full' : 'w-full px-3 py-2 rounded-xl gap-2'
+                  }`}
+                  title="Sign out"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  {!collapsed && (
+                    <span className="text-sm font-medium">Sign out</span>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </aside>

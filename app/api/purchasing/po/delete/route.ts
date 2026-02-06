@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // DELETE endpoint to remove a purchase order and its line items
 export async function DELETE(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     // Get the PO ID from query params
     const { searchParams } = new URL(request.url);
     const poId = searchParams.get('id');

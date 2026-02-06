@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPOLines } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 // POST endpoint to add new line items
 export async function POST(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     // Parse the request body
     const requestData = await request.json();
 
@@ -36,15 +37,24 @@ export async function POST(request: NextRequest) {
 
     // Create the line items
     const linesToCreate = lines.map((line: any) => ({
-      purchaseOrderId,
+      purchaseorderid: purchaseOrderId,
       description: line.description,
-      supplierSku: line.supplierSku || null,
+      suppliersku: line.supplierSku || null,
       quantity: line.quantity,
-      unitCostExVAT: line.unitCostExVAT,
-      lineTotalExVAT: line.lineTotalExVAT,
+      unitcostexvat: line.unitCostExVAT,
+      linetotalexvat: line.lineTotalExVAT,
+      rrp: line.rrp ?? null,
     }));
 
-    const newLines = await createPOLines(linesToCreate);
+    const { data: newLines, error } = await supabase
+      .from('polines')
+      .insert(linesToCreate)
+      .select();
+
+    if (error || !newLines) {
+      console.error('Create PO lines DB error:', error);
+      throw new Error(`Failed to create PO lines: ${error?.message}`);
+    }
 
     return NextResponse.json({
       success: true,

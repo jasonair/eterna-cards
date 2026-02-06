@@ -9,6 +9,7 @@ import {
   updatePurchaseOrder,
 } from '@/lib/db';
 import { uploadInvoiceImages } from '@/lib/storage';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // Gemini prompt for structured data extraction
 const EXTRACTION_PROMPT = `You are running inside the Google Gemini API.
@@ -83,6 +84,7 @@ interface ExtractedData {
 
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await requireAuth(request);
     // 1. Validate API key
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -217,6 +219,7 @@ export async function POST(request: NextRequest) {
         email: extractedData.supplier.email,
         phone: extractedData.supplier.phone,
         vatNumber: extractedData.supplier.vatNumber,
+        user_id: user.id,
       });
 
       // Create purchase order first (we need the ID for image upload)
@@ -228,6 +231,8 @@ export async function POST(request: NextRequest) {
         paymentTerms: extractedData.purchaseOrder.paymentTerms,
         imageUrl: null,
         imageUrls: null,
+        notes: null,
+        user_id: user.id,
       });
 
       // Upload invoice image to Supabase Storage
@@ -263,6 +268,7 @@ export async function POST(request: NextRequest) {
           quantity: line.quantity,
           unitCostExVAT: line.unitCostExVAT,
           lineTotalExVAT: line.lineTotalExVAT,
+          rrp: null, // RRP not extracted from AI yet, will be added later
         }))
       );
 

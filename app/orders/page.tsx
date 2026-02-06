@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
+import { authenticatedFetch } from '@/lib/api-client';
 
 interface LineItem {
   variant_id: number;
@@ -95,7 +96,7 @@ export default function OrdersPage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch('/api/orders');
+        const res = await authenticatedFetch('/api/orders');
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json.error || 'Failed to load orders');
@@ -115,7 +116,7 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/orders');
+      const res = await authenticatedFetch('/api/orders');
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.error || 'Failed to load orders');

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 import { deleteProductAndInventory } from '@/lib/db';
 
 // GET product + inventory + transit history for /inventory/[productId]
 export async function GET(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
@@ -206,6 +207,30 @@ export async function GET(request: NextRequest) {
       displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
     }
 
+    // Fallback: if average is still 0 but we have transit history, derive from ALL
+    // transit records (including received) using PO line unit costs
+    if (displayAverageCost <= 0 && transitRows.length > 0) {
+      let fallbackTotalQty = 0;
+      let fallbackTotalCost = 0;
+      for (const t of transitRows) {
+        const qty = Number(t.quantity ?? 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue;
+
+        const poLine = poLinesById.get(t.polineid) || null;
+        let unitCost = Number(t.unitcostgbp ?? 0);
+        if (!Number.isFinite(unitCost) || unitCost <= 0) {
+          unitCost = poLine ? Number(poLine.unitCostExVAT ?? 0) : 0;
+        }
+        if (!Number.isFinite(unitCost) || unitCost <= 0) continue;
+
+        fallbackTotalQty += qty;
+        fallbackTotalCost += qty * unitCost;
+      }
+      if (fallbackTotalQty > 0 && fallbackTotalCost > 0) {
+        displayAverageCost = Number((fallbackTotalCost / fallbackTotalQty).toFixed(4));
+      }
+    }
+
     if (inventory) {
       inventory = { ...inventory, averageCostGBP: displayAverageCost };
     } else if (displayAverageCost > 0) {
@@ -239,6 +264,7 @@ export async function GET(request: NextRequest) {
 // Update product metadata (name, SKUs, category, tags, barcodes)
 export async function PUT(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
@@ -349,6 +375,7 @@ export async function PUT(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const body = await request.json();
 
     const rawName = typeof body.name === 'string' ? body.name.trim() : '';
@@ -382,6 +409,7 @@ export async function POST(request: NextRequest) {
       category: normalizeOptionalString(body.category),
       tags: toStringArray(body.tags),
       imageurl: normalizeOptionalString(body.imageUrl),
+      user_id: user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -427,6 +455,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 

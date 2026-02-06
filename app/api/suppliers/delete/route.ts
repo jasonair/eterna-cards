@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteSupplier } from '@/lib/db';
-import { supabase } from '@/lib/supabaseClient';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // DELETE endpoint to remove a supplier and all associated data
 export async function DELETE(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
     // Get the supplier ID from query params
     const { searchParams } = new URL(request.url);
     const supplierId = searchParams.get('id');

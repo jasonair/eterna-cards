@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { authenticatedFetch } from '@/lib/api-client';
 
 interface SupplierOption {
   id: string;
@@ -48,7 +49,7 @@ export default function NewProductPage() {
   useEffect(() => {
     const loadSuppliers = async () => {
       try {
-        const res = await fetch('/api/purchasing/po/view');
+        const res = await authenticatedFetch('/api/purchasing/po/view');
         const json = await res.json().catch(() => null);
         if (!res.ok || !json || !Array.isArray(json.suppliers)) return;
         setSuppliers(
@@ -102,7 +103,7 @@ export default function NewProductPage() {
         supplierId: form.supplierId.trim() || null,
       };
 
-      const res = await fetch('/api/inventory/product', {
+      const res = await authenticatedFetch('/api/inventory/product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

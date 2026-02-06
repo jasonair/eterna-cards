@@ -73,7 +73,8 @@ Extract the following information from the invoice/delivery note image(s) and re
       "supplierSku": "Item code/SKU (alphanumeric product code, NOT the quantity)",
       "quantity": number,
       "unitCostExVAT": number,
-      "lineTotalExVAT": number
+      "lineTotalExVAT": number,
+      "rrp": number
     }
   ],
   "totals": {
@@ -115,6 +116,15 @@ Exchange rates the SERVER will use to convert TO GBP (for your reference ONLY, d
 - If you see a column with mixed alphanumeric codes next to descriptions, that's likely the SKU
 - If no clear SKU column exists, leave supplierSku as empty string or null
 - When in doubt, prefer leaving it empty rather than guessing incorrectly
+
+**RRP (Recommended Retail Price) Extraction:**
+- Look for columns labeled: "RRP", "Retail Price", "MSRP", "Recommended Price", "Selling Price", "List Price"
+- RRP is usually higher than the unit cost and represents the suggested selling price
+- Common on distributor invoices, especially for retail goods like trading cards, games, collectibles
+- If multiple price columns exist, RRP is typically the highest price (excluding VAT)
+- If no RRP is clearly indicated, set rrp to null - do NOT guess or use unit cost
+- RRP should be in the same currency as other prices on the invoice
+- Look for text like "RRP:" or "Retail:" followed by a price
 
 **Other Important Rules:**
 - If multiple files/pages are provided, they are ALL part of the SAME invoice/order - combine all data

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findOrCreateSupplier, createPurchaseOrder, createPOLines, syncInventoryFromPurchaseOrder, createOrUpdateInvoiceForPurchaseOrder } from '@/lib/db';
 import { uploadInvoiceImages } from '@/lib/storage';
+import { requireAuth } from '@/lib/auth-helpers';
 
 interface SavePORequest {
   supplier: {
@@ -22,13 +23,16 @@ interface SavePORequest {
     quantity: number;
     unitCostExVAT: number;
     lineTotalExVAT: number;
+    rrp?: number;
   }>;
+  notes?: string;
   imageFiles?: File[];
 }
 
 // POST endpoint to save approved purchase order data
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await requireAuth(request);
     const contentType = request.headers.get('content-type');
     let data: SavePORequest;
     let imageFiles: File[] = [];
@@ -73,6 +77,7 @@ export async function POST(request: NextRequest) {
         email: data.supplier.email || null,
         phone: data.supplier.phone || null,
         vatNumber: data.supplier.vatNumber || null,
+        user_id: user.id,
       });
 
       // Create purchase order first (we need the ID for image upload)
@@ -84,6 +89,8 @@ export async function POST(request: NextRequest) {
         paymentTerms: data.purchaseOrder.paymentTerms || null,
         imageUrl: null,
         imageUrls: null,
+        notes: data.notes || null,
+        user_id: user.id,
       });
 
       // Upload images if provided
@@ -121,6 +128,7 @@ export async function POST(request: NextRequest) {
           quantity: line.quantity,
           unitCostExVAT: line.unitCostExVAT,
           lineTotalExVAT: line.lineTotalExVAT,
+          rrp: line.rrp || null,
         }))
       );
 

@@ -26,6 +26,7 @@ export interface PurchaseOrder {
   paymentTerms: string | null;
   imageUrl: string | null;
   imageUrls: string[] | null;
+  notes: string | null;
   createdAt: string;
 }
 
@@ -37,6 +38,7 @@ export interface POLine {
   quantity: number;
   unitCostExVAT: number;
   lineTotalExVAT: number;
+  rrp: number | null;
 }
 
 export interface Totals {
@@ -48,18 +50,19 @@ export interface Totals {
 
 // Helper function to find or create a supplier
 export async function findOrCreateSupplier(
-  supplierData: Omit<Supplier, 'id' | 'createdAt'>
+  supplierData: Omit<Supplier, 'id' | 'createdAt'> & { user_id: string }
 ): Promise<string> {
   // Validate that supplier name is not null or empty
   if (!supplierData.name || supplierData.name.trim() === '') {
     throw new Error('Supplier name is required');
   }
 
-  // Try to find existing supplier by name (case-insensitive)
+  // Try to find existing supplier by name (case-insensitive) within user's data
   const { data: existing } = await supabase
     .from('suppliers')
     .select('id')
     .ilike('name', supplierData.name)
+    .eq('user_id', supplierData.user_id)
     .single();
 
   if (existing) {
@@ -74,6 +77,7 @@ export async function findOrCreateSupplier(
       address: supplierData.address,
       email: supplierData.email,
       phone: supplierData.phone,
+      user_id: supplierData.user_id,
     })
     .select('id')
     .single();
@@ -87,7 +91,7 @@ export async function findOrCreateSupplier(
 
 // Helper function to create a purchase order
 export async function createPurchaseOrder(
-  poData: Omit<PurchaseOrder, 'id' | 'createdAt'>
+  poData: Omit<PurchaseOrder, 'id' | 'createdAt'> & { user_id: string }
 ): Promise<string> {
   console.log('Creating purchase order with data:', poData);
   console.log('Supabase URL:', process.env.SUPABASE_URL);
@@ -103,6 +107,8 @@ export async function createPurchaseOrder(
       paymentterms: poData.paymentTerms,
       imageurl: poData.imageUrl,
       imageurls: poData.imageUrls,
+      notes: poData.notes,
+      user_id: poData.user_id,
     })
     .select('id')
     .single();
@@ -128,6 +134,7 @@ export async function updatePurchaseOrder(
   if (updates.paymentTerms !== undefined) mappedUpdates.paymentterms = updates.paymentTerms;
   if (updates.imageUrl !== undefined) mappedUpdates.imageurl = updates.imageUrl;
   if (updates.imageUrls !== undefined) mappedUpdates.imageurls = updates.imageUrls;
+  if (updates.notes !== undefined) mappedUpdates.notes = updates.notes;
 
   const { data, error } = await supabase
     .from('purchaseorders')
@@ -157,6 +164,7 @@ export async function createPOLines(
         quantity: line.quantity,
         unitcostexvat: line.unitCostExVAT,
         linetotalexvat: line.lineTotalExVAT,
+        rrp: line.rrp,
       }))
     )
     .select();
@@ -179,6 +187,7 @@ export async function updatePOLine(
   if (updates.quantity !== undefined) mappedUpdates.quantity = updates.quantity;
   if (updates.unitCostExVAT !== undefined) mappedUpdates.unitcostexvat = updates.unitCostExVAT;
   if (updates.lineTotalExVAT !== undefined) mappedUpdates.linetotalexvat = updates.lineTotalExVAT;
+  if (updates.rrp !== undefined) mappedUpdates.rrp = updates.rrp;
 
   const { data, error } = await supabase
     .from('polines')
@@ -796,6 +805,30 @@ export async function getInventorySnapshot(): Promise<InventoryItemView[]> {
     let displayAverageCost = inventory ? inventory.averageCostGBP : 0;
     if (blendedTotalQty > 0 && blendedTotalCost > 0) {
       displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
+    }
+
+    // Fallback: if average is still 0 but we have transit history, derive from ALL
+    // transit records (including received) using PO line unit costs
+    if (displayAverageCost <= 0 && productTransit.length > 0) {
+      let fallbackTotalQty = 0;
+      let fallbackTotalCost = 0;
+      for (const t of productTransit) {
+        const qty = Number(t.quantity ?? 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue;
+
+        const poLine = poLinesById.get(t.polineid as string) || null;
+        let unitCost = Number(t.unitcostgbp ?? 0);
+        if (!Number.isFinite(unitCost) || unitCost <= 0) {
+          unitCost = Number(poLine?.unitcostexvat ?? 0);
+        }
+        if (!Number.isFinite(unitCost) || unitCost <= 0) continue;
+
+        fallbackTotalQty += qty;
+        fallbackTotalCost += qty * unitCost;
+      }
+      if (fallbackTotalQty > 0 && fallbackTotalCost > 0) {
+        displayAverageCost = Number((fallbackTotalCost / fallbackTotalQty).toFixed(4));
+      }
     }
 
     if (inventory) {
