@@ -39,9 +39,7 @@ const ChannelIcon = ({ channel }: { channel: string }) => {
   switch (channel) {
     case 'shopify':
       return (
-        <svg className="w-5 h-5 text-[#96bf48]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M15.337 3.415c-.165-.07-.345-.085-.505-.04-.16.045-.295.145-.38.28l-1.12 1.73c-.19-.53-.495-1.025-.895-1.43-.815-.83-1.9-1.205-2.98-1.205-2.24 0-4.2 1.97-4.71 4.88-.54 3.08.89 5.16 3.08 5.86l-.4 1.51c-.15.555-.355 1.205-.355 1.205-.035.14-.02.29.045.42.065.13.175.23.31.28l1.34.53c.19.075.4.03.55-.115s.2-.36.14-.56l-.28-1.01 1.76-6.69c.055-.205.005-.42-.13-.58-.135-.16-.345-.24-.555-.215-.21.025-.395.145-.5.325l-.27.445c-.2-.365-.5-.66-.865-.85.315-1.205.915-2.145 1.695-2.145.575 0 .955.39 1.195.97.1.245.175.51.22.79.045.28.06.565.045.85-.045.795-.27 1.56-.645 2.25-.375.685-.895 1.27-1.515 1.705-.305.215-.43.61-.305.96.125.35.48.56.855.51.88-.12 1.71-.5 2.39-1.085.68-.585 1.19-1.345 1.47-2.195.28-.85.32-1.765.12-2.635-.2-.87-.62-1.665-1.215-2.3-.06-.065-.13-.12-.2-.17l1.36-2.1c.135-.21.15-.475.04-.695-.11-.22-.33-.36-.575-.37z"/>
-        </svg>
+        <img src="/Shopify_icon.svg" alt="Shopify" className="w-5 h-5" />
       );
     case 'ebay':
       return (
@@ -88,31 +86,30 @@ const StatusBadge = ({ status, type }: { status: string | null; type: 'financial
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [shopifyConnected, setShopifyConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await authenticatedFetch('/api/orders');
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json.error || 'Failed to load orders');
-        }
-        setOrders(json.orders || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load orders');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    checkShopifyStatus();
     loadOrders();
   }, []);
 
-  const handleRefresh = async () => {
+  const checkShopifyStatus = async () => {
+    try {
+      const res = await authenticatedFetch('/api/account');
+      const json = await res.json();
+      if (json.success) {
+        setShopifyConnected(json.data.settings.shopifyConnected);
+      }
+    } catch {
+      // Silently fail - non-critical
+    }
+  };
+
+  const loadOrders = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -127,6 +124,30 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSync = async () => {
+    try {
+      setSyncing(true);
+      setError(null);
+      setSyncMessage(null);
+      const res = await authenticatedFetch('/api/orders/sync', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to sync orders');
+      }
+      setSyncMessage(json.message);
+      // Reload orders after sync
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sync orders');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await loadOrders();
   };
 
   const formatDate = (dateStr: string) => {
@@ -157,6 +178,18 @@ export default function OrdersPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:ml-auto">
+            {shopifyConnected && (
+              <button
+                onClick={handleSync}
+                disabled={syncing || loading}
+                className="inline-flex items-center px-4 py-2 border border-[#96bf48] text-sm font-medium rounded-md text-[#96bf48] bg-transparent hover:bg-[#96bf48]/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#96bf48] transition-colors disabled:opacity-50"
+              >
+                <svg className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {syncing ? 'Syncing...' : 'Sync Shopify'}
+              </button>
+            )}
             <button
               onClick={handleRefresh}
               disabled={loading}
@@ -170,12 +203,45 @@ export default function OrdersPage() {
           </div>
         </div>
 
+        {/* Shopify Connection Banner */}
+        {shopifyConnected === false && (
+          <div className="bg-[#1e1e1e] border border-[#3a3a3a] rounded-xl p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#96bf48]/10 flex items-center justify-center">
+                <ChannelIcon channel="shopify" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-200">Connect your Shopify store</p>
+                <p className="text-xs text-gray-500">Link your Shopify account to sync orders automatically</p>
+              </div>
+            </div>
+            <a
+              href="/account"
+              className="shrink-0 px-4 py-2 text-sm font-medium rounded-lg bg-[#96bf48] text-white hover:bg-[#a8d14f] transition-colors"
+            >
+              Connect
+            </a>
+          </div>
+        )}
+
+        {/* Sync Message */}
+        {syncMessage && (
+          <div className="bg-green-900/20 border border-green-800 rounded-lg p-3 text-sm text-green-300 flex items-center justify-between">
+            <span>{syncMessage}</span>
+            <button onClick={() => setSyncMessage(null)} className="text-green-500 hover:text-green-300 ml-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* Channel Legend */}
         <div className="flex items-center gap-4 text-xs text-gray-400">
           <span className="font-medium text-gray-300">Channels:</span>
           <div className="flex items-center gap-1.5">
             <ChannelIcon channel="shopify" />
-            <span>Shopify</span>
+            <span>Shopify{shopifyConnected ? '' : ' (not connected)'}</span>
           </div>
           <div className="flex items-center gap-1.5 opacity-40">
             <ChannelIcon channel="ebay" />
@@ -209,7 +275,28 @@ export default function OrdersPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               <p className="text-sm">No orders yet</p>
-              <p className="text-xs text-gray-500 mt-1">Orders will appear here when synced from Shopify</p>
+              {shopifyConnected ? (
+                <>
+                  <p className="text-xs text-gray-500 mt-1">Click &quot;Sync Shopify&quot; to pull your latest orders</p>
+                  <button
+                    onClick={handleSync}
+                    disabled={syncing}
+                    className="mt-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-[#96bf48] hover:bg-[#a8d14f] transition-colors disabled:opacity-50"
+                  >
+                    {syncing ? 'Syncing...' : 'Sync Now'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mt-1">Connect your Shopify store to start syncing orders</p>
+                  <a
+                    href="/account"
+                    className="mt-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-[#96bf48] hover:bg-[#a8d14f] transition-colors"
+                  >
+                    Connect Shopify
+                  </a>
+                </>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -286,7 +373,7 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-xs text-gray-400">
-                            {formatDate(order.created_at)}
+                            {formatDate(order.processed_at || order.created_at)}
                           </div>
                         </td>
                       </tr>

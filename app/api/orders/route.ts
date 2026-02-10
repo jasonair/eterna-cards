@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       created_at
     `)
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('processed_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (channel) {
