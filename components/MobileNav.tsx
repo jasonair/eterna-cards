@@ -150,14 +150,10 @@ export default function MobileNav() {
       <header className="sm:hidden fixed top-0 left-0 right-0 z-50 bg-[#141414] border-b border-[#2a2a2a] px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-[#ff6b35] overflow-hidden flex items-center justify-center">
-              <img
-                src="/eterna-cards-logo-2.jpg"
-                alt="Logo"
-                className="h-full w-full object-cover"
-              />
+            <div className="h-8 w-8 rounded-full bg-[#ff6b35] flex items-center justify-center">
+              <span className="text-white font-bold text-sm">SL</span>
             </div>
-            <span className="text-sm font-semibold text-gray-100">Eterna Cards</span>
+            <span className="text-sm font-semibold text-gray-100">StockLane.ai</span>
           </div>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}

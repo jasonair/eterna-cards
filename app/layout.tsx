@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eterna Cards",
+  title: "StockLane.ai",
   description: "Inventory and purchase order management",
   viewport: {
     width: "device-width",

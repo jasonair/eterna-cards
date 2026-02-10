@@ -37,7 +37,7 @@ export default function AppShell({ children }: AppShellProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#111111] px-4">
         <div className="max-w-md w-full text-center">
-          <h1 className="text-3xl font-bold text-gray-100 mb-4">Welcome to Eterna Cards</h1>
+          <h1 className="text-3xl font-bold text-gray-100 mb-4">Welcome to StockLane.ai</h1>
           <p className="text-gray-400 mb-8">Please sign in to access your inventory and purchase orders</p>
           <div className="space-y-4">
             <a

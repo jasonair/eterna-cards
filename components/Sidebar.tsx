@@ -192,11 +192,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 collapsed ? 'h-10 w-10' : 'h-16 w-16'
               }`}
             >
-              <img
-                src="/eterna-cards-logo-2.jpg"
-                alt="Profile"
-                className="h-full w-full object-cover"
-              />
+              <span className="text-white font-bold text-lg">SL</span>
             </div>
           </div>
           <nav className="flex flex-col items-start gap-2 mt-2 w-full">
