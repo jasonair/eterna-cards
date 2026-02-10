@@ -115,6 +115,30 @@ export async function GET(request: NextRequest) {
             displayAverageCost = Number((blendedTotalCost / blendedTotalQty).toFixed(4));
           }
 
+          // Fallback: if average is still 0 but we have transit history (including
+          // received), derive from ALL transit records using PO line unit costs
+          if (displayAverageCost <= 0 && productTransit.length > 0) {
+            let fallbackTotalQty = 0;
+            let fallbackTotalCost = 0;
+            for (const t of productTransit) {
+              const qty = Number(t.quantity ?? 0);
+              if (!Number.isFinite(qty) || qty <= 0) continue;
+
+              const poLine = poLinesById.get(t.polineid) || null;
+              let unitCost = Number(t.unitcostgbp ?? 0);
+              if (!Number.isFinite(unitCost) || unitCost <= 0) {
+                unitCost = Number(poLine?.unitcostexvat ?? 0);
+              }
+              if (!Number.isFinite(unitCost) || unitCost <= 0) continue;
+
+              fallbackTotalQty += qty;
+              fallbackTotalCost += qty * unitCost;
+            }
+            if (fallbackTotalQty > 0 && fallbackTotalCost > 0) {
+              displayAverageCost = Number((fallbackTotalCost / fallbackTotalQty).toFixed(4));
+            }
+          }
+
           if (inventoryRecord) {
             inventoryRecord = { ...inventoryRecord, averageCostGBP: displayAverageCost };
           } else if (displayAverageCost > 0) {

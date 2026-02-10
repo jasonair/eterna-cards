@@ -550,6 +550,47 @@ export default function InventoryPage() {
     return `£${amount.toFixed(2)} GBP`;
   };
 
+  const exportInventoryCSV = () => {
+    const escapeCSV = (val: string) => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const headers = ['Name', 'Primary SKU', 'Supplier SKU', 'Category', 'Supplier', 'Barcodes', 'Qty On Hand', 'Qty In Transit', 'Avg Cost (GBP)', 'On Hand Value (GBP)', 'Total Value (GBP)'];
+    const rows: string[][] = visibleItems.map((row) => {
+      const onHand = row.inventory?.quantityOnHand ?? 0;
+      const inTransit = row.quantityInTransit ?? 0;
+      const avgCost = row.inventory?.averageCostGBP ?? 0;
+      const onHandValue = onHand * avgCost;
+      const totalValue = (onHand + inTransit) * avgCost;
+
+      return [
+        row.product.name || '',
+        row.product.primarySku || '',
+        row.product.supplierSku || '',
+        row.product.category || '',
+        row.supplier?.name || '',
+        (row.product.barcodes || []).join('; '),
+        String(onHand),
+        String(inTransit),
+        avgCost.toFixed(4),
+        onHandValue.toFixed(2),
+        totalValue.toFixed(2),
+      ];
+    });
+
+    const csvContent = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleStartNewFolder = () => {
     let parentId: string | null = null;
     if (activeFolderId !== 'all') {
@@ -798,6 +839,35 @@ export default function InventoryPage() {
               </svg>
               Import Invoice
             </a>
+            <a
+              href="/inventory/import"
+              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Import CSV
+            </a>
+            <button
+              onClick={exportInventoryCSV}
+              disabled={visibleItems.length === 0}
+              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Export CSV
+            </button>
             <button
               onClick={handleRefresh}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
