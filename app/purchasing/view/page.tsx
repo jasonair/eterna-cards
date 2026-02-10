@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedFetch } from '@/lib/api-client';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface Supplier {
   id: string;
@@ -259,68 +257,62 @@ export default function ViewDataPage() {
     setSelectedMonths([]);
   };
 
-  const exportToPDF = (monthsToExport?: string[]) => {
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(18);
-    doc.text('Purchase Orders Report', 14, 20);
-    
-    // Date
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-    
-    let yPosition = 35;
-
+  const exportToCSV = (monthsToExport?: string[]) => {
     const groupedPOs = groupPOsByMonth();
     const monthsToInclude = monthsToExport || Object.keys(groupedPOs);
+
+    const escapeCSV = (val: string) => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const headers = ['Month', 'Invoice #', 'Supplier', 'Date', 'Currency', 'Description', 'SKU', 'Qty', 'Unit Cost (ex VAT)', 'RRP', 'Line Total (ex VAT)'];
+    const rows: string[][] = [];
 
     Object.entries(groupedPOs)
       .filter(([month]) => monthsToInclude.includes(month))
       .forEach(([month, pos]) => {
-      // Check if we need a new page
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-
-      // Month header
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(month, 14, yPosition);
-      yPosition += 8;
-
-      // Prepare table data
-      const tableData = pos.map(po => {
-        const lines = getPOLines(po.id);
-        const totalAmount = lines.reduce((sum, line) => sum + line.lineTotalExVAT, 0);
-        
-        return [
-          po.invoiceNumber || 'N/A',
-          getSupplierName(po.supplierId),
-          formatDate(po.invoiceDate),
-          po.currency,
-          totalAmount.toFixed(2),
-          lines.length.toString()
-        ];
+        for (const po of pos) {
+          const lines = getPOLines(po.id);
+          if (lines.length === 0) {
+            rows.push([
+              month,
+              po.invoiceNumber || 'N/A',
+              getSupplierName(po.supplierId),
+              formatDate(po.invoiceDate),
+              po.currency,
+              '', '', '', '', '', '',
+            ]);
+          } else {
+            for (const line of lines) {
+              rows.push([
+                month,
+                po.invoiceNumber || 'N/A',
+                getSupplierName(po.supplierId),
+                formatDate(po.invoiceDate),
+                po.currency,
+                line.description || '',
+                line.supplierSku || '',
+                String(line.quantity),
+                line.unitCostExVAT.toFixed(2),
+                line.rrp != null ? line.rrp.toFixed(2) : '',
+                line.lineTotalExVAT.toFixed(2),
+              ]);
+            }
+          }
+        }
       });
 
-      // Add table
-      autoTable(doc, {
-        startY: yPosition,
-        head: [['Invoice #', 'Supplier', 'Date', 'Currency', 'Total (ex VAT)', 'Lines']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235], fontSize: 10 },
-        styles: { fontSize: 9 },
-        margin: { left: 14, right: 14 }
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 10;
-    });
-
-    // Save the PDF
-    doc.save(`purchase-orders-${new Date().toISOString().split('T')[0]}.pdf`);
+    const csvContent = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `purchase-orders-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDelete = async (poId: string) => {
@@ -681,7 +673,7 @@ export default function ViewDataPage() {
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Export PDF
+              Export CSV
             </button>
             <button
               onClick={fetchData}
@@ -1537,7 +1529,7 @@ export default function ViewDataPage() {
                 <button
                   onClick={() => {
                     if (selectedMonths.length > 0) {
-                      exportToPDF(selectedMonths);
+                      exportToCSV(selectedMonths);
                       setShowExportModal(false);
                     }
                   }}

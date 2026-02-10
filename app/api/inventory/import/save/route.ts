@@ -1,0 +1,221 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helpers';
+
+interface ImportRow {
+  name: string;
+  primarySku?: string | null;
+  supplierSku?: string | null;
+  category?: string | null;
+  barcodes?: string[];
+  quantityOnHand?: number;
+  quantityInTransit?: number;
+  averageCostGBP?: number;
+  supplier?: string | null;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { user, supabase } = await requireAuth(request);
+    const body = await request.json();
+
+    const rows: ImportRow[] = body.rows;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return NextResponse.json(
+        { error: 'No rows provided' },
+        { status: 400 },
+      );
+    }
+
+    // Fetch existing products for deduplication
+    const { data: existingProducts } = await supabase
+      .from('products')
+      .select('id, name, primarysku, suppliersku, barcodes')
+      .eq('user_id', user.id);
+
+    const products = existingProducts || [];
+
+    // Fetch existing suppliers for matching by name
+    const { data: existingSuppliers } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .eq('user_id', user.id);
+
+    const suppliers = existingSuppliers || [];
+    const supplierCache = new Map<string, string>(); // lowercase name -> id
+    suppliers.forEach((s) => supplierCache.set(s.name.toLowerCase(), s.id));
+
+    const resolveSupplier = async (name: string | null): Promise<string | null> => {
+      if (!name) return null;
+      const key = name.toLowerCase();
+
+      // Check cache first
+      const cached = supplierCache.get(key);
+      if (cached) return cached;
+
+      // Create new supplier
+      const { data: newSupplier, error: supErr } = await supabase
+        .from('suppliers')
+        .insert({ name, user_id: user.id })
+        .select('id')
+        .single();
+
+      if (supErr || !newSupplier) return null;
+
+      supplierCache.set(key, newSupplier.id);
+      return newSupplier.id;
+    };
+
+    const now = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rawName = typeof row.name === 'string' ? row.name.trim() : '';
+      if (!rawName) {
+        skipped++;
+        errors.push(`Row ${i + 1}: Missing product name, skipped`);
+        continue;
+      }
+
+      const supplierName = typeof row.supplier === 'string' ? row.supplier.trim() || null : null;
+      const primarySku = typeof row.primarySku === 'string' ? row.primarySku.trim() || null : null;
+      const supplierSku = typeof row.supplierSku === 'string' ? row.supplierSku.trim() || null : null;
+      const category = typeof row.category === 'string' ? row.category.trim() || null : null;
+      const barcodes = Array.isArray(row.barcodes)
+        ? row.barcodes.map((b) => (typeof b === 'string' ? b.trim() : '')).filter((b) => b.length > 0)
+        : [];
+      const quantityOnHand = typeof row.quantityOnHand === 'number' && row.quantityOnHand >= 0
+        ? row.quantityOnHand
+        : 0;
+      const quantityInTransit = typeof row.quantityInTransit === 'number' && row.quantityInTransit >= 0
+        ? row.quantityInTransit
+        : 0;
+      const totalQuantity = quantityOnHand + quantityInTransit;
+      const averageCostGBP = typeof row.averageCostGBP === 'number' && row.averageCostGBP >= 0
+        ? Number(row.averageCostGBP.toFixed(4))
+        : 0;
+
+      // Deduplicate: match by primarySku or barcode
+      let matchedProduct: (typeof products)[number] | null = null;
+
+      if (primarySku) {
+        const skuLower = primarySku.toLowerCase();
+        matchedProduct = products.find(
+          (p) =>
+            (p.primarysku && p.primarysku.toLowerCase() === skuLower) ||
+            (p.suppliersku && p.suppliersku.toLowerCase() === skuLower)
+        ) || null;
+      }
+
+      if (!matchedProduct && barcodes.length > 0) {
+        const barcodeLowerSet = new Set(barcodes.map((b) => b.toLowerCase()));
+        matchedProduct = products.find((p) => {
+          const existing = Array.isArray(p.barcodes) ? p.barcodes : [];
+          return existing.some((b: string) => barcodeLowerSet.has(b.toLowerCase()));
+        }) || null;
+      }
+
+      let productId: string;
+
+      if (matchedProduct) {
+        // Update existing product if needed
+        productId = matchedProduct.id;
+        updated++;
+      } else {
+        // Create new product
+        const { data: newProduct, error: insertError } = await supabase
+          .from('products')
+          .insert({
+            name: rawName,
+            primarysku: primarySku,
+            suppliersku: supplierSku,
+            barcodes,
+            aliases: [],
+            supplierid: await resolveSupplier(supplierName),
+            category,
+            tags: [],
+            imageurl: null,
+            user_id: user.id,
+            created_at: now,
+            updated_at: now,
+          })
+          .select('id, name, primarysku, suppliersku, barcodes')
+          .single();
+
+        if (insertError || !newProduct) {
+          errors.push(`Row ${i + 1} ("${rawName}"): Failed to create product - ${insertError?.message || 'Unknown error'}`);
+          skipped++;
+          continue;
+        }
+
+        products.push(newProduct);
+        productId = newProduct.id;
+        created++;
+      }
+
+      // Create or update inventory record if quantity > 0 or cost > 0
+      if (totalQuantity > 0 || averageCostGBP > 0) {
+        const { data: existingInventory } = await supabase
+          .from('inventory')
+          .select('id, quantityonhand, averagecostgbp')
+          .eq('productid', productId)
+          .single();
+
+        if (existingInventory) {
+          // Weighted average merge: combine existing + imported
+          const existQty = Number(existingInventory.quantityonhand ?? 0);
+          const existCost = Number(existingInventory.averagecostgbp ?? 0);
+          const newQty = existQty + totalQuantity;
+          const newCost = newQty > 0
+            ? Number(((existQty * existCost + totalQuantity * averageCostGBP) / newQty).toFixed(4))
+            : averageCostGBP;
+
+          await supabase
+            .from('inventory')
+            .update({
+              quantityonhand: newQty,
+              averagecostgbp: newCost,
+              lastupdated: now,
+            })
+            .eq('id', existingInventory.id);
+        } else {
+          await supabase
+            .from('inventory')
+            .insert({
+              productid: productId,
+              quantityonhand: totalQuantity,
+              averagecostgbp: averageCostGBP,
+              lastupdated: now,
+              user_id: user.id,
+            });
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        total: rows.length,
+        created,
+        updated,
+        skipped,
+        errors: errors.length > 0 ? errors : undefined,
+      },
+    });
+  } catch (error) {
+    console.error('Inventory import save error:', error);
+    if (error instanceof Error && error.message === 'Authentication required') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 },
+      );
+    }
+    return NextResponse.json(
+      { error: 'Failed to import inventory' },
+      { status: 500 },
+    );
+  }
+}
