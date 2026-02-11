@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { clearCache } from '@/lib/cache';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -56,6 +57,9 @@ export async function PUT(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    clearCache(`purchasing_po_view_v1_${user.id}`);
+    clearCache(`inventory_snapshot_v1_${user.id}`);
 
     return NextResponse.json({
       success: true,

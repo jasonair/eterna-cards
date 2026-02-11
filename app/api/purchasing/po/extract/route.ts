@@ -126,6 +126,17 @@ Exchange rates the SERVER will use to convert TO GBP (for your reference ONLY, d
 - RRP should be in the same currency as other prices on the invoice
 - Look for text like "RRP:" or "Retail:" followed by a price
 
+**UNIT COST vs LINE TOTAL - CRITICAL:**
+- Each line item has a quantity, a unit cost (price per single unit), and a line total (quantity × unit cost).
+- Some invoices only show ONE price per line (not both unit cost and line total).
+- When only ONE price is shown per line, you MUST determine if it is the unit cost or line total:
+  1. Sum ALL the single prices across all line items.
+  2. Compare that sum to the invoice subtotal/total (ignoring shipping/extras/VAT).
+  3. If the sum of prices ≈ the subtotal/total → the prices are LINE TOTALS. Calculate unit cost = price / quantity.
+  4. If the sum of (price × quantity) ≈ the subtotal/total → the prices are UNIT COSTS. Calculate line total = price × quantity.
+- Example: "5 Widget ¥53,500" with invoice total ≈ sum of all such prices → ¥53,500 is the LINE TOTAL, unit cost = ¥53,500 / 5 = ¥10,700.
+- ALWAYS verify: the sum of all lineTotalExVAT values should approximately equal the subtotal.
+
 **Other Important Rules:**
 - If multiple files/pages are provided, they are ALL part of the SAME invoice/order - combine all data
 - Extract ALL line items from ALL documents/pages
@@ -370,7 +381,32 @@ export async function POST(request: NextRequest) {
     // 6. Convert all monetary values from original currency to GBP using live exchange rates
     convertToGBP(extractedData, exchangeRates);
 
-    // 7. Return extracted data WITHOUT saving to database
+    // 7. Sanity check: if sum of line totals is way off from the invoice total,
+    //    the AI likely confused unit costs with line totals. Auto-correct.
+    if (extractedData.totals?.total > 0 && extractedData.poLines.length > 0) {
+      const lineSum = extractedData.poLines.reduce((s, l) => s + (l.lineTotalExVAT || 0), 0);
+      const invoiceTotal = extractedData.totals.total;
+      // If line items sum to more than 1.5× the invoice total, the prices were likely
+      // line totals that the AI treated as unit costs (then multiplied by quantity again)
+      if (lineSum > invoiceTotal * 1.5) {
+        extractedData.poLines = extractedData.poLines.map((line) => {
+          const qty = line.quantity || 1;
+          // The current unitCostExVAT is actually the line total; fix it
+          const correctedLineTotal = line.unitCostExVAT;
+          const correctedUnit = Number((correctedLineTotal / qty).toFixed(2));
+          return {
+            ...line,
+            unitCostExVAT: correctedUnit,
+            lineTotalExVAT: Number(correctedLineTotal.toFixed(2)),
+          };
+        });
+        // Recalculate subtotal
+        const newSubtotal = extractedData.poLines.reduce((s, l) => s + l.lineTotalExVAT, 0);
+        extractedData.totals.subtotal = Number(newSubtotal.toFixed(2));
+      }
+    }
+
+    // 8. Return extracted data WITHOUT saving to database
     // Note: We allow incomplete data - user can fill in missing fields in the UI
     return NextResponse.json({
       success: true,

@@ -52,34 +52,6 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
 
-    // Handle email update
-    if (action === 'update_email') {
-      const { newEmail } = body;
-      if (!newEmail || typeof newEmail !== 'string') {
-        return NextResponse.json(
-          { error: 'Valid email address is required' },
-          { status: 400 }
-        );
-      }
-
-      const { error } = await supabase.auth.admin.updateUserById(user.id, {
-        email: newEmail,
-      });
-
-      if (error) {
-        console.error('Update email error:', error);
-        return NextResponse.json(
-          { error: error.message || 'Failed to update email' },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Email updated successfully. Please check your new email for a confirmation link.',
-      });
-    }
-
     // Handle Shopify connect
     if (action === 'connect_shopify') {
       const { storeDomain, accessToken } = body;

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedFetch } from '@/lib/api-client';
+import { supabase } from '@/lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
 
 interface AccountSettings {
@@ -66,18 +67,13 @@ export default function AccountPage() {
     setEmailMessage(null);
 
     try {
-      const res = await authenticatedFetch('/api/account', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_email', newEmail: newEmail.trim() }),
-      });
-      const data = await res.json();
+      const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
 
-      if (data.success) {
-        setEmailMessage({ type: 'success', text: data.message });
+      if (!error) {
+        setEmailMessage({ type: 'success', text: 'A confirmation link has been sent to your new email address. Please click it to complete the change.' });
         setNewEmail('');
       } else {
-        setEmailMessage({ type: 'error', text: data.error || 'Failed to update email' });
+        setEmailMessage({ type: 'error', text: error.message || 'Failed to update email' });
       }
     } catch (err) {
       setEmailMessage({ type: 'error', text: 'Failed to update email' });

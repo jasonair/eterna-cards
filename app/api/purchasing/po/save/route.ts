@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { findOrCreateSupplier, createPurchaseOrder, createPOLines, syncInventoryFromPurchaseOrder, createOrUpdateInvoiceForPurchaseOrder } from '@/lib/db';
 import { uploadInvoiceImages } from '@/lib/storage';
 import { requireAuth } from '@/lib/auth-helpers';
+import { clearCache } from '@/lib/cache';
 
 interface SavePORequest {
   supplier: {
@@ -137,7 +138,12 @@ export async function POST(request: NextRequest) {
         supplierId,
         purchaseOrderId,
         poLines,
+        user_id: user.id,
       });
+
+      // Invalidate caches so the new PO appears immediately
+      clearCache(`purchasing_po_view_v1_${user.id}`);
+      clearCache(`inventory_snapshot_v1_${user.id}`);
 
       return NextResponse.json({
         success: true,
