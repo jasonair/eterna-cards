@@ -26,6 +26,12 @@ interface SavePORequest {
     lineTotalExVAT: number;
     rrp?: number;
   }>;
+  totals?: {
+    subtotal?: number;
+    extras?: number;
+    vat?: number;
+    total?: number;
+  };
   notes?: string;
   imageFiles?: File[];
 }
@@ -91,6 +97,10 @@ export async function POST(request: NextRequest) {
         imageUrl: null,
         imageUrls: null,
         notes: data.notes || null,
+        subtotalExVAT: data.totals?.subtotal ?? null,
+        extras: data.totals?.extras ?? null,
+        vat: data.totals?.vat ?? null,
+        totalAmount: data.totals?.total ?? null,
         user_id: user.id,
       });
 

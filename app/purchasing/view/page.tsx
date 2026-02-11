@@ -25,6 +25,10 @@ interface PurchaseOrder {
   imageUrl: string | null;
   imageUrls: string[] | null;
   notes: string | null;
+  subtotalExVAT: number | null;
+  extras: number | null;
+  vat: number | null;
+  totalAmount: number | null;
   createdAt: string;
 }
 
@@ -789,7 +793,11 @@ export default function ViewDataPage() {
                 <div className="space-y-6">
                   {filteredPOs.map((po) => {
                     const lines = getPOLines(po.id);
-                    const totalAmount = lines.reduce((sum, line) => sum + line.lineTotalExVAT, 0);
+                    const lineTotalSum = lines.reduce((sum, line) => sum + line.lineTotalExVAT, 0);
+                    const subtotal = po.subtotalExVAT != null ? po.subtotalExVAT : lineTotalSum;
+                    const extras = po.extras ?? 0;
+                    const vat = po.vat ?? 0;
+                    const totalAmount = po.totalAmount != null ? po.totalAmount : (subtotal + extras + vat);
                     const receiveSummary = getPOReceiveSummary(po.id);
 
                     return (
@@ -813,7 +821,7 @@ export default function ViewDataPage() {
                           <p className="text-lg sm:text-2xl font-bold text-white">
                             {formatCurrency(totalAmount, po.currency)}
                           </p>
-                          <p className="text-white/80 text-[10px] sm:text-sm">ex VAT (GBP)</p>
+                          <p className="text-white/80 text-[10px] sm:text-sm">Total (GBP)</p>
                         </div>
                         <div className="flex gap-1 sm:gap-2">
                           {po.notes && po.notes.trim() && (
@@ -1069,6 +1077,36 @@ export default function ViewDataPage() {
                       </table>
                     </div>
                   </div>
+
+                  {/* Totals Breakdown */}
+                  {(po.subtotalExVAT != null || extras > 0 || vat > 0) && (
+                    <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#1a1a1a] border-t border-[#3a3a3a]">
+                      <div className="flex justify-end">
+                        <div className="w-full sm:w-72 space-y-1.5 text-xs sm:text-sm">
+                          <div className="flex justify-between text-gray-400">
+                            <span>Subtotal (ex VAT)</span>
+                            <span className="font-mono text-gray-100">{formatCurrency(subtotal, po.currency)}</span>
+                          </div>
+                          {extras > 0 && (
+                            <div className="flex justify-between text-gray-400">
+                              <span>Extras (Shipping, etc.)</span>
+                              <span className="font-mono text-gray-100">{formatCurrency(extras, po.currency)}</span>
+                            </div>
+                          )}
+                          {vat > 0 && (
+                            <div className="flex justify-between text-gray-400">
+                              <span>VAT</span>
+                              <span className="font-mono text-gray-100">{formatCurrency(vat, po.currency)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between pt-1.5 border-t border-[#3a3a3a] font-semibold text-gray-100">
+                            <span>Total</span>
+                            <span className="font-mono">{formatCurrency(totalAmount, po.currency)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Footer with metadata */}
                   <div className="px-3 sm:px-6 py-2 sm:py-3 bg-[#1a1a1a] border-t border-[#3a3a3a] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
