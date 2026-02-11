@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { clearCache } from '@/lib/cache';
 
 // DELETE endpoint to remove a purchase order and its line items
 export async function DELETE(request: NextRequest) {
@@ -24,6 +25,10 @@ export async function DELETE(request: NextRequest) {
       .single();
 
     if (fetchError || !po) {
+      console.error('PO lookup failed:', { poId, fetchError: fetchError?.message, fetchErrorCode: fetchError?.code, po });
+      // Clear cache even on 404 so stale data is removed from the view
+      clearCache(`purchasing_po_view_v1_${user.id}`);
+      clearCache(`inventory_snapshot_v1_${user.id}`);
       return NextResponse.json(
         { error: 'Purchase order not found' },
         { status: 404 }
@@ -48,6 +53,10 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Invalidate caches so the deleted PO disappears immediately
+    clearCache(`purchasing_po_view_v1_${user.id}`);
+    clearCache(`inventory_snapshot_v1_${user.id}`);
 
     return NextResponse.json({
       success: true,

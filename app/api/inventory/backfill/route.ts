@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const { data: rawPurchaseOrders, error: poError } = await supabase
       .from('purchaseorders')
-      .select('id, supplierid');
+      .select('id, supplierid, user_id');
 
     if (poError || !rawPurchaseOrders) {
       console.error('Inventory backfill error: failed to load purchase orders', poError);
@@ -46,6 +46,7 @@ export async function GET() {
     const purchaseOrders = rawPurchaseOrders.map((po: any) => ({
       id: po.id as string,
       supplierId: po.supplierid as string,
+      user_id: po.user_id as string,
     }));
 
     const poLines: POLine[] = rawPoLines.map((line: any) => ({
@@ -84,6 +85,7 @@ export async function GET() {
         supplierId: po.supplierId,
         purchaseOrderId: po.id,
         poLines: lines,
+        user_id: po.user_id,
       });
 
       purchaseOrdersProcessed += 1;

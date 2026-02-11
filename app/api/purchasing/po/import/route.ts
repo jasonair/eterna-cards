@@ -277,6 +277,7 @@ export async function POST(request: NextRequest) {
         supplierId,
         purchaseOrderId,
         poLines,
+        user_id: user.id,
       });
 
       // 8. Return success response with all data

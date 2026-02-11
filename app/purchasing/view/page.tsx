@@ -108,7 +108,7 @@ export default function ViewDataPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await authenticatedFetch('/api/purchasing/po/view');
+      const response = await authenticatedFetch('/api/purchasing/po/view?refresh=true');
 
       if (!response.ok) {
         throw new Error('Failed to fetch data');
@@ -138,7 +138,7 @@ export default function ViewDataPage() {
       return {
         status: 'not_received' as const,
         receivedQuantity: 0,
-        remainingQuantity: 0,
+        remainingQuantity: line.quantity,
       };
     }
 
@@ -147,7 +147,7 @@ export default function ViewDataPage() {
       return {
         status: 'not_received' as const,
         receivedQuantity: 0,
-        remainingQuantity: 0,
+        remainingQuantity: line.quantity,
       };
     }
 
@@ -326,11 +326,11 @@ export default function ViewDataPage() {
         method: 'DELETE',
       });
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 404) {
         throw new Error('Failed to delete purchase order');
       }
 
-      // Refresh data after successful deletion
+      // Refresh data after deletion (including 404 - already deleted)
       await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');

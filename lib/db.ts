@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { serverSupabase as supabase } from './supabase-server';
 import { testSupabaseConnection } from './test-supabase';
 import { checkTableStructure } from './check-schema';
 
@@ -173,7 +173,16 @@ export async function createPOLines(
     throw new Error(`Failed to create PO lines: ${error?.message}`);
   }
 
-  return data;
+  return data.map((row: any) => ({
+    id: row.id,
+    purchaseOrderId: row.purchaseorderid,
+    description: row.description,
+    supplierSku: row.suppliersku ?? null,
+    quantity: Number(row.quantity ?? 0),
+    unitCostExVAT: Number(row.unitcostexvat ?? 0),
+    lineTotalExVAT: Number(row.linetotalexvat ?? 0),
+    rrp: row.rrp != null ? Number(row.rrp) : null,
+  }));
 }
 
 // Helper function to update a line item
@@ -565,6 +574,7 @@ export async function syncInventoryFromPurchaseOrder(params: {
   supplierId: string;
   purchaseOrderId: string;
   poLines: POLine[];
+  user_id: string;
 }): Promise<{
   productsCreated: number;
   productsMatched: number;
@@ -669,6 +679,7 @@ export async function syncInventoryFromPurchaseOrder(params: {
           category: null,
           tags: [],
           imageurl: null,
+          user_id: params.user_id,
         })
         .select()
         .single();
@@ -703,6 +714,7 @@ export async function syncInventoryFromPurchaseOrder(params: {
         remainingquantity: quantity,
         unitcostgbp: unitCost,
         status: 'in_transit',
+        user_id: params.user_id,
       });
 
     if (transitError) {
