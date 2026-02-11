@@ -232,6 +232,10 @@ export async function POST(request: NextRequest) {
         imageUrl: null,
         imageUrls: null,
         notes: null,
+        subtotalExVAT: extractedData.totals?.subTotalExVAT ?? null,
+        extras: null,
+        vat: extractedData.totals?.vatTotal ?? null,
+        totalAmount: extractedData.totals?.grandTotal ?? null,
         user_id: user.id,
       });
 

@@ -43,6 +43,10 @@ export async function POST(request: NextRequest) {
       imageUrl: null,
       imageUrls: [],
       notes: poData.notes || null,
+      subtotalExVAT: poData.subtotalExVAT ?? null,
+      extras: poData.extras ?? null,
+      vat: poData.vat ?? null,
+      totalAmount: poData.totalAmount ?? null,
       user_id: user.id,
     });
 

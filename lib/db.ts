@@ -27,6 +27,10 @@ export interface PurchaseOrder {
   imageUrl: string | null;
   imageUrls: string[] | null;
   notes: string | null;
+  subtotalExVAT: number | null;
+  extras: number | null;
+  vat: number | null;
+  totalAmount: number | null;
   createdAt: string;
 }
 
@@ -108,6 +112,10 @@ export async function createPurchaseOrder(
       imageurl: poData.imageUrl,
       imageurls: poData.imageUrls,
       notes: poData.notes,
+      subtotalexvat: poData.subtotalExVAT ?? null,
+      extras: poData.extras ?? null,
+      vat: poData.vat ?? null,
+      totalamount: poData.totalAmount ?? null,
       user_id: poData.user_id,
     })
     .select('id')
@@ -135,6 +143,10 @@ export async function updatePurchaseOrder(
   if (updates.imageUrl !== undefined) mappedUpdates.imageurl = updates.imageUrl;
   if (updates.imageUrls !== undefined) mappedUpdates.imageurls = updates.imageUrls;
   if (updates.notes !== undefined) mappedUpdates.notes = updates.notes;
+  if (updates.subtotalExVAT !== undefined) mappedUpdates.subtotalexvat = updates.subtotalExVAT;
+  if (updates.extras !== undefined) mappedUpdates.extras = updates.extras;
+  if (updates.vat !== undefined) mappedUpdates.vat = updates.vat;
+  if (updates.totalAmount !== undefined) mappedUpdates.totalamount = updates.totalAmount;
 
   const { data, error } = await supabase
     .from('purchaseorders')

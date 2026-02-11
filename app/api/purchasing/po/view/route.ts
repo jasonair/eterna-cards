@@ -81,6 +81,10 @@ export async function GET(request: NextRequest) {
           imageUrl: po.imageurl ?? null,
           imageUrls: po.imageurls ?? null,
           notes: po.notes ?? null,
+          subtotalExVAT: po.subtotalexvat != null ? Number(po.subtotalexvat) : null,
+          extras: po.extras != null ? Number(po.extras) : null,
+          vat: po.vat != null ? Number(po.vat) : null,
+          totalAmount: po.totalamount != null ? Number(po.totalamount) : null,
           createdAt: po.created_at,
         }));
 
