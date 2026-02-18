@@ -1,12 +1,19 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
 import { syncInventoryFromPurchaseOrder, type POLine } from '@/lib/db';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { user, supabase } = await requireAuth(request);
+
+    // SECURITY: Rate limit – backfill is expensive, allow 5 requests/min
+    const blocked = applyRateLimit(request, user.id, { limit: 5, windowMs: 60_000 });
+    if (blocked) return blocked;
+
     const { data: rawPurchaseOrders, error: poError } = await supabase
       .from('purchaseorders')
       .select('id, supplierid, user_id');

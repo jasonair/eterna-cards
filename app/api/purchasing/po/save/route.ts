@@ -3,6 +3,7 @@ import { findOrCreateSupplier, createPurchaseOrder, createPOLines, syncInventory
 import { uploadInvoiceImages } from '@/lib/storage';
 import { requireAuth } from '@/lib/auth-helpers';
 import { clearCache } from '@/lib/cache';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 interface SavePORequest {
   supplier: {
@@ -40,6 +41,10 @@ interface SavePORequest {
 export async function POST(request: NextRequest) {
   try {
     const { user } = await requireAuth(request);
+    // SECURITY: Rate limit – save is a write operation
+    const blocked = applyRateLimit(request, user.id, { limit: 30, windowMs: 60_000 });
+    if (blocked) return blocked;
+
     const contentType = request.headers.get('content-type');
     let data: SavePORequest;
     let imageFiles: File[] = [];

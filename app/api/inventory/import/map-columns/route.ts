@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 const KNOWN_FIELDS = [
   'name',
@@ -94,13 +95,17 @@ function tryLocalMapping(headers: string[]): Record<string, KnownField | null> {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth(request);
+    const { user } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
 
     const headers: string[] = body.headers;
     const sampleRows: string[][] = body.sampleRows;
 
-    if (!Array.isArray(headers) || headers.length === 0) {
+    // SECURITY: Cap headers and sample rows to prevent abuse
+    if (!Array.isArray(headers) || headers.length === 0 || headers.length > 200) {
       return NextResponse.json(
         { error: 'No headers provided' },
         { status: 400 },

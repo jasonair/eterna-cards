@@ -10,6 +10,7 @@ import {
 } from '@/lib/db';
 import { uploadInvoiceImages } from '@/lib/storage';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 // Gemini prompt for structured data extraction
 const EXTRACTION_PROMPT = `You are running inside the Google Gemini API.
@@ -85,6 +86,11 @@ interface ExtractedData {
 export async function POST(request: NextRequest) {
   try {
     const { user } = await requireAuth(request);
+
+    // SECURITY: Rate limit – AI import is expensive, allow 10 requests/min
+    const blocked = applyRateLimit(request, user.id, { limit: 10, windowMs: 60_000 });
+    if (blocked) return blocked;
+
     // 1. Validate API key
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {

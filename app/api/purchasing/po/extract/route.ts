@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 // Force Node.js runtime for pdf-parse
 export const runtime = 'nodejs';
@@ -244,6 +246,12 @@ function convertToGBP(extractedData: ExtractedData, exchangeRates: { [key: strin
 // POST endpoint to extract data from invoice (without saving)
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await requireAuth(request);
+
+    // SECURITY: Rate limit – AI extraction is expensive, allow 10 requests/min
+    const blocked = applyRateLimit(request, user.id, { limit: 10, windowMs: 60_000 });
+    if (blocked) return blocked;
+
     // 1. Get API key
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -255,7 +263,9 @@ export async function POST(request: NextRequest) {
 
     // 2. Get uploaded files
     const formData = await request.formData();
-    const fileCount = parseInt(formData.get('fileCount') as string || '1');
+    const fileCountRaw = parseInt(formData.get('fileCount') as string || '1');
+    // SECURITY: Cap file count to prevent abuse
+    const fileCount = Math.min(Math.max(1, fileCountRaw), 20);
     
     const files: File[] = [];
     for (let i = 0; i < fileCount; i++) {

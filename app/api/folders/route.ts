@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { isValidUUID, sanitizeString } from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
     const { data, error } = await supabase
       .from('folders')
       .select('id, parentid, name, description, sort_order, created_at, updated_at')
@@ -26,13 +30,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
-    const rawName = (body?.name as string | undefined) ?? '';
-    const name = rawName.trim();
+    const name = sanitizeString(body?.name, 200);
     const parentId = (body?.parentId as string | null) ?? null;
 
     if (!name) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 });
+      return NextResponse.json({ error: 'name is required (max 200 characters)' }, { status: 400 });
+    }
+
+    // SECURITY: Validate parentId is a valid UUID if provided
+    if (parentId !== null && !isValidUUID(parentId)) {
+      return NextResponse.json({ error: 'parentId must be a valid UUID' }, { status: 400 });
     }
 
     const { data: existing, error: existingError } = await supabase
@@ -76,12 +87,19 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
-    const id = (body?.id as string | undefined) ?? undefined;
+    const id = body?.id;
     const parentId = (body?.parentId as string | null | undefined) ?? null;
 
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: 'id must be a valid UUID' }, { status: 400 });
+    }
+
+    if (parentId !== null && !isValidUUID(parentId)) {
+      return NextResponse.json({ error: 'parentId must be a valid UUID' }, { status: 400 });
     }
 
     const { data: folder, error } = await supabase
@@ -109,11 +127,14 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: 'id must be a valid UUID' }, { status: 400 });
     }
 
     const { error } = await supabase.from('folders').delete().eq('id', id).eq('user_id', user.id);

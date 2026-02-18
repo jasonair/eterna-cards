@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
 import { clearCache } from '@/lib/cache';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { isValidUUID } from '@/lib/validation';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -9,12 +11,16 @@ export const runtime = 'nodejs';
 export async function PUT(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const { searchParams } = new URL(request.url);
     const poId = searchParams.get('id');
 
-    if (!poId) {
+    // SECURITY: Validate UUID format
+    if (!isValidUUID(poId)) {
       return NextResponse.json(
-        { error: 'Purchase order ID is required' },
+        { error: 'Purchase order ID must be a valid UUID' },
         { status: 400 }
       );
     }

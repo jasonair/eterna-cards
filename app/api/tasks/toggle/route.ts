@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { isValidUUID } from '@/lib/validation';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -7,13 +9,17 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
-    const id = body?.id as string | undefined;
+    const id = body?.id;
     const explicitCompleted = body?.completed as boolean | undefined;
 
-    if (!id || typeof id !== 'string') {
+    // SECURITY: Validate UUID format
+    if (!isValidUUID(id)) {
       return NextResponse.json(
-        { error: 'id is required' },
+        { error: 'id must be a valid UUID' },
         { status: 400 }
       );
     }

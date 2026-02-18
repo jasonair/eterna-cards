@@ -1,26 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findDuplicatePurchaseOrders } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { sanitizeString } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   try {
+    const { user } = await requireAuth(request);
+
+    // SECURITY: Rate limit per IP + user
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
-    console.log('Received check-duplicates request:', body);
-    
-    const { supplierName, invoiceNumber, invoiceDate, poLines } = body;
+
+    const supplierName = sanitizeString(body?.supplierName, 500);
+    const invoiceNumber = sanitizeString(body?.invoiceNumber, 200);
+    const invoiceDate = sanitizeString(body?.invoiceDate, 20);
+    const poLines = body?.poLines;
 
     // Validate required fields
-    if (!supplierName || typeof supplierName !== 'string' || supplierName.trim() === '') {
-      console.error('Missing or invalid supplierName:', supplierName);
+    if (!supplierName) {
       return NextResponse.json(
         { error: 'Supplier name is required and must be a non-empty string' },
         { status: 400 }
       );
     }
 
-    if (!poLines || !Array.isArray(poLines) || poLines.length === 0) {
-      console.error('Invalid poLines:', poLines);
+    if (!Array.isArray(poLines) || poLines.length === 0 || poLines.length > 500) {
       return NextResponse.json(
-        { error: 'At least one line item is required' },
+        { error: 'poLines must be an array with 1-500 items' },
         { status: 400 }
       );
     }

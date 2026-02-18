@@ -97,10 +97,6 @@ export async function findOrCreateSupplier(
 export async function createPurchaseOrder(
   poData: Omit<PurchaseOrder, 'id' | 'createdAt'> & { user_id: string }
 ): Promise<string> {
-  console.log('Creating purchase order with data:', poData);
-  console.log('Supabase URL:', process.env.SUPABASE_URL);
-  console.log('Supabase key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-  
   const { data: newPO, error } = await supabase
     .from('purchaseorders')
     .insert({

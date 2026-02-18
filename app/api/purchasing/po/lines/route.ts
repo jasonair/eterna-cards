@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
 import { clearCache } from '@/lib/cache';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { isValidUUID } from '@/lib/validation';
 
 // Force Node.js runtime for lowdb
 export const runtime = 'nodejs';
@@ -9,12 +11,15 @@ export const runtime = 'nodejs';
 export async function PUT(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const { searchParams } = new URL(request.url);
     const lineId = searchParams.get('id');
 
-    if (!lineId) {
+    if (!isValidUUID(lineId)) {
       return NextResponse.json(
-        { error: 'Line item ID is required' },
+        { error: 'Line item ID must be a valid UUID' },
         { status: 400 }
       );
     }
@@ -78,12 +83,15 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const { searchParams } = new URL(request.url);
     const lineId = searchParams.get('id');
 
-    if (!lineId) {
+    if (!isValidUUID(lineId)) {
       return NextResponse.json(
-        { error: 'Line item ID is required' },
+        { error: 'Line item ID must be a valid UUID' },
         { status: 400 }
       );
     }
