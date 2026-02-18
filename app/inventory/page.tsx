@@ -47,16 +47,6 @@ interface InventoryRow {
   supplier: Supplier | null;
 }
 
-interface Task {
-  id: string;
-  title: string;
-  completed: boolean;
-  created_at: string;
-  completed_at: string | null;
-}
-
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
 const MobileBarcodeScanner = dynamic(
   () => import('@/components/MobileBarcodeScanner'),
   { ssr: false },
@@ -77,7 +67,27 @@ export default function InventoryPage() {
   const [barcodeProductId, setBarcodeProductId] = useState<string | null>(null);
   const [barcodeValue, setBarcodeValue] = useState('');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sl_inventory_viewMode');
+      if (saved === 'grid' || saved === 'table') return saved;
+    }
+    return 'grid';
+  });
+  const [foldersPanelCollapsed, setFoldersPanelCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sl_inventory_foldersCollapsed') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sl_inventory_viewMode', viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('sl_inventory_foldersCollapsed', String(foldersPanelCollapsed));
+  }, [foldersPanelCollapsed]);
 
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
@@ -88,17 +98,8 @@ export default function InventoryPage() {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [taskError, setTaskError] = useState<string | null>(null);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
-
-  const activeTasks = useMemo(
-    () => tasks.filter((t) => !t.completed),
-    [tasks],
-  );
 
   const handleScannedBarcode = (code: string) => {
     const raw = (code || '').trim();
@@ -129,17 +130,6 @@ export default function InventoryPage() {
     showToast('No product found for scanned code. Showing search results instead.');
   };
 
-  const recentCompletedTasks = useMemo(
-    () =>
-      tasks.filter((t) => {
-        if (!t.completed || !t.completed_at) return false;
-        const ts = new Date(t.completed_at).getTime();
-        if (Number.isNaN(ts)) return false;
-        return Date.now() - ts <= ONE_DAY_MS;
-      }),
-    [tasks],
-  );
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -160,27 +150,6 @@ export default function InventoryPage() {
     };
 
     load();
-  }, []);
-
-  useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        setTasksLoading(true);
-        setTaskError(null);
-        const res = await authenticatedFetch('/api/tasks');
-        const json = await res.json();
-        if (!res.ok || !json.success) {
-          throw new Error(json.error || 'Failed to load tasks');
-        }
-        setTasks(json.data || []);
-      } catch (err) {
-        setTaskError(err instanceof Error ? err.message : 'Failed to load tasks');
-      } finally {
-        setTasksLoading(false);
-      }
-    };
-
-    loadTasks();
   }, []);
 
   useEffect(() => {
@@ -495,47 +464,6 @@ export default function InventoryPage() {
     }
   };
 
-  const handleCreateTask = async () => {
-    const title = newTaskTitle.trim();
-    if (!title) return;
-
-    try {
-      setTaskError(null);
-      const res = await authenticatedFetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to create task');
-      }
-      setTasks((prev) => [json.data, ...prev]);
-      setNewTaskTitle('');
-    } catch (err) {
-      setTaskError(err instanceof Error ? err.message : 'Failed to create task');
-    }
-  };
-
-  const handleToggleTask = async (task: Task) => {
-    try {
-      setTaskError(null);
-      const res = await authenticatedFetch('/api/tasks/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: task.id }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to update task');
-      }
-      const updated: Task = json.data;
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-    } catch (err) {
-      setTaskError(err instanceof Error ? err.message : 'Failed to update task');
-    }
-  };
-
   const showToast = (message: string) => {
     setToastMessage(message);
     if (typeof window !== 'undefined') {
@@ -704,8 +632,8 @@ export default function InventoryPage() {
     preview.style.left = '-1000px';
     preview.style.padding = '4px 8px';
     preview.style.maxWidth = '220px';
-    preview.style.backgroundColor = '#2a2a2a';
-    preview.style.color = '#f5f5f5';
+    preview.style.backgroundColor = '#ffffff';
+    preview.style.color = '#1c1917';
     preview.style.borderRadius = '999px';
     preview.style.fontSize = '11px';
     preview.style.fontWeight = '600';
@@ -817,256 +745,85 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 pr-3 sm:pr-4 lg:pr-6 pl-3 sm:pl-4 lg:pl-6 md:pl-0">
-      <div className="w-full space-y-6">
+    <div className="h-screen flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
+      {/* Sticky top section */}
+      <div className="flex-none px-3 sm:px-4 lg:px-6 md:pl-0 pt-4 sm:pt-6 pb-3 space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100">Inventory</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">Inventory</h1>
           </div>
           <div className="flex flex-wrap gap-2 sm:ml-auto">
             <a
-              href="/purchasing/import"
-              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              Import Invoice
-            </a>
-            <a
               href="/inventory/import"
-              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Import CSV
             </a>
             <button
               onClick={exportInventoryCSV}
               disabled={visibleItems.length === 0}
-              className="inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export CSV
             </button>
             <button
               onClick={handleRefresh}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              title="Refresh"
+              className="inline-flex items-center justify-center w-9 h-9 border border-transparent rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
             </button>
           </div>
         </div>
 
         {/* Global error */}
         {error && (
-          <div className="bg-[#3a2a2a] border border-red-500 rounded-lg p-3 text-sm text-red-200">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {/* Top controls: checklist + search/stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Checklist */}
-          <div className="lg:col-span-1 bg-[#191919] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 flex flex-col max-h-60 sm:max-h-80 shadow-sm shadow-black/30">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#333333]">
-              <h2 className="text-xs sm:text-[13px] font-semibold tracking-wide text-gray-200 uppercase">
-                Warehouse Checklist
-              </h2>
-              {tasksLoading && (
-                <span className="text-[11px] text-gray-500">Loading…</span>
-              )}
-            </div>
-
-            <div className="flex mb-3 gap-2">
-              <input
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleCreateTask();
-                  }
-                }}
-                placeholder="Add a task (e.g. 'Receive Korean shipment')"
-                className="flex-1 rounded-md bg-[#101010] border border-[#333333] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] placeholder:text-gray-500"
-              />
-              <button
-                type="button"
-                onClick={handleCreateTask}
-                className="px-3.5 py-2 text-xs font-semibold rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] shadow-sm shadow-black/40"
-              >
-                Add
-              </button>
-            </div>
-
-            {taskError && (
-              <div className="text-xs text-red-300 mb-1">{taskError}</div>
-            )}
-
-            <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-              {activeTasks.length === 0 && recentCompletedTasks.length === 0 && !tasksLoading && (
-                <p className="text-xs text-gray-400">No tasks yet. Add your first task above.</p>
-              )}
-
-              {activeTasks.map((task) => (
-                <label
-                  key={task.id}
-                  className="flex items-center gap-2 text-xs text-gray-100 cursor-pointer group px-2 py-1 rounded-md hover:bg-[#222222]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => handleToggleTask(task)}
-                    className="h-3 w-3 rounded border-[#3a3a3a] bg-[#1a1a1a] text-[#ff6b35] focus:ring-[#ff6b35]"
-                  />
-                  <span
-                    className={`flex-1 truncate group-hover:text-gray-50 ${
-                      task.completed ? 'line-through text-gray-500' : ''
-                    }`}
-                  >
-                    {task.title}
-                  </span>
-                </label>
-              ))}
-
-              {recentCompletedTasks.length > 0 && (
-                <>
-                  <div className="mt-2 pt-2 border-t border-[#3a3a3a] flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-gray-200">Done (last 24 hours)</span>
-                    <span className="text-[10px] text-gray-500">Auto-clears after 24h</span>
-                  </div>
-                  {recentCompletedTasks.map((task) => (
-                    <label
-                      key={task.id}
-                      className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer group px-2 py-1 rounded-md hover:bg-[#222222]"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => handleToggleTask(task)}
-                        className="h-3 w-3 rounded border-[#3a3a3a] bg-[#1a1a1a] text-[#ff6b35] focus:ring-[#ff6b35]"
-                      />
-                      <span
-                        className={`flex-1 truncate group-hover:text-gray-200 ${
-                          task.completed ? 'line-through text-gray-500' : ''
-                        }`}
-                      >
-                        {task.title}
-                      </span>
-                    </label>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Search & stats */}
-          <div className="lg:col-span-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-300 mb-1">
-                  Scan barcode or search by name / SKU
-                </label>
-                <div className="relative">
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Scan barcode here or type to search..."
-                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
-                  />
-                  {search && (
-                    <button
-                      type="button"
-                      onClick={() => setSearch('')}
-                      className="absolute inset-y-0 right-2 my-auto inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-gray-400 hover:text-gray-100 hover:bg-[#3a3a3a]"
-                      aria-label="Clear search"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setScannerOpen(true)}
-                className="inline-flex items-center justify-center px-3 py-2 rounded-md bg-[#ff6b35] text-white text-xs font-medium hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-[#ff6b35] sm:hidden mt-5"
-              >
-                <svg
-                  className="w-4 h-4 mr-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 7h3M4 17h3M17 7h3M17 17h3M9 7h6M9 17h6M7 9v6M17 9v6"
-                  />
-                </svg>
-                Scan
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => setStockFilter('all')}
-                className={`flex flex-col justify-between bg-[#222222] rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
+                className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
                   stockFilter === 'all'
-                    ? 'border-[#ff6b35] bg-[#333333] shadow-md shadow-black/40 scale-[1.02]'
-                    : 'border-[#3a3a3a] hover:border-[#ff6b35]/70 hover:shadow-md hover:shadow-black/30'
+                    ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
+                    : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
                 }`}
               >
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Products</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Products</p>
                 {loading ? (
-                  <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                  <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
                 ) : (
-                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{items.length.toLocaleString()}</p>
+                  <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">{items.length.toLocaleString()}</p>
                 )}
               </button>
               <button
                 type="button"
                 onClick={() => setStockFilter('onHand')}
-                className={`flex flex-col justify-between bg-[#222222] rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
+                className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
                   stockFilter === 'onHand'
-                    ? 'border-[#ff6b35] bg-[#333333] shadow-md shadow-black/40 scale-[1.02]'
-                    : 'border-[#3a3a3a] hover:border-[#ff6b35]/70 hover:shadow-md hover:shadow-black/30'
+                    ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
+                    : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
                 }`}
               >
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Hand</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">In Hand</p>
                 {loading ? (
-                  <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                  <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
                 ) : (
-                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                  <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">
                     £{items.reduce(
                       (sum, row) => sum + ((row.inventory?.quantityOnHand || 0) * (row.inventory?.averageCostGBP || 0)),
                       0
@@ -1077,27 +834,27 @@ export default function InventoryPage() {
               <button
                 type="button"
                 onClick={() => setStockFilter('inTransit')}
-                className={`flex flex-col justify-between bg-[#222222] rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
+                className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
                   stockFilter === 'inTransit'
-                    ? 'border-[#ff6b35] bg-[#333333] shadow-md shadow-black/40 scale-[1.02]'
-                    : 'border-[#3a3a3a] hover:border-[#ff6b35]/70 hover:shadow-md hover:shadow-black/30'
+                    ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
+                    : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
                 }`}
               >
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">In Transit</p>
                 {loading ? (
-                  <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                  <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
                 ) : (
-                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                  <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">
                     £{items.reduce((sum, row) => sum + ((row.quantityInTransit || 0) * (row.inventory?.averageCostGBP || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 )}
               </button>
-              <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Total Value</p>
+              <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Total Value</p>
                 {loading ? (
-                  <div className="h-6 sm:h-7 w-24 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+                  <div className="h-6 sm:h-7 w-24 bg-stone-100 rounded animate-pulse mt-1" />
                 ) : (
-                  <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">
+                  <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">
                     £{items.reduce(
                       (sum, row) => sum + (((row.inventory?.quantityOnHand || 0) + (row.quantityInTransit || 0)) * (row.inventory?.averageCostGBP || 0)),
                       0
@@ -1105,29 +862,153 @@ export default function InventoryPage() {
                   </p>
                 )}
               </div>
-            </div>
-          </div>
         </div>
 
-        {/* Inventory list */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Folders sidebar (Sortly-style drawer) */}
-          <div className="md:col-span-1 bg-[#141414] border-r border-[#2a2a2a] rounded-none overflow-hidden flex flex-col max-h-[640px]">
-            {/* Drawer header */}
-            <div className="px-3 py-2 border-b border-[#2a2a2a] flex items-center justify-between bg-[#191919]">
-              <div className="flex flex-col">
-                <span className="text-[11px] font-semibold text-gray-200 uppercase tracking-wide">
-                  Available inventory
-                </span>
-                <span className="text-[10px] text-gray-500">Browse locations & folders</span>
-              </div>
+        {/* Breadcrumbs + toolbar row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+            {foldersPanelCollapsed && (
               <button
                 type="button"
-                onClick={handleStartNewFolder}
-                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-[#3a3a3a] text-gray-200 bg-[#1f1f1f] hover:bg-[#333333] text-xs"
+                onClick={() => setFoldersPanelCollapsed(false)}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-stone-200 dark:border-stone-700 text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-700 transition-colors text-[11px] font-medium mr-1"
+                title="Show folders"
               >
-                +
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                Folders
               </button>
+            )}
+            <span className="uppercase tracking-wide text-[10px] text-stone-400">Location</span>
+            <span className="text-stone-400">/</span>
+            <button
+              type="button"
+              onClick={() => setActiveFolderId('all')}
+              className={`px-2 py-0.5 rounded-md ${
+                activeFolderId === 'all'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'
+              }`}
+            >
+              All items
+            </button>
+            {activeFolderPath.map((segment, index) => (
+              <span key={segment.id} className="flex items-center gap-2">
+                <span className="text-stone-400">/</span>
+                {index === activeFolderPath.length - 1 ? (
+                  <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white font-semibold">
+                    {segment.name}
+                  </span>
+                ) : (
+                  <span className="text-stone-600 dark:text-stone-400">{segment.name}</span>
+                )}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="relative">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name / SKU"
+                className="w-56 sm:w-80 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute inset-y-0 right-2 my-auto inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-stone-500 hover:text-stone-900 hover:bg-stone-100"
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              ) : (
+                <svg className="absolute inset-y-0 right-2 my-auto h-3.5 w-3.5 text-stone-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-600 sm:hidden"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h3M4 17h3M17 7h3M17 17h3M9 7h6M9 17h6M7 9v6M17 9v6" />
+              </svg>
+            </button>
+            <div className="inline-flex rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-0.5">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
+                }`}
+                title="Grid view"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
+                }`}
+                title="Table view"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push('/inventory/new')}
+              className="px-3 py-1.5 rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700"
+            >
+              New item
+            </button>
+          </div>
+        </div>
+      </div>{/* end sticky top */}
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full grid grid-cols-1 md:grid-cols-[auto_1fr] gap-0">
+          {/* Folders sidebar */}
+          <div className={`bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out ${foldersPanelCollapsed ? 'md:w-0 md:border-0 md:opacity-0 md:overflow-hidden hidden md:block' : 'md:w-64'}`}>
+            {/* Drawer header */}
+            <div className="px-3 py-2 border-b border-stone-200 dark:border-stone-700 flex items-center justify-between bg-white dark:bg-stone-900">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-stone-800 dark:text-stone-200 uppercase tracking-wide">
+                  Available inventory
+                </span>
+                <span className="text-[10px] text-stone-400 dark:text-stone-500">Browse locations & folders</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleStartNewFolder}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-xs"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFoldersPanelCollapsed(true)}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-stone-200 dark:border-stone-700 text-stone-400 bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-stone-600 transition-colors"
+                  title="Hide folders"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Folder tree */}
@@ -1147,19 +1028,19 @@ export default function InventoryPage() {
                       }
                     }}
                     placeholder="New folder name"
-                    className="flex-1 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-[11px] text-gray-100 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                    className="flex-1 rounded-md bg-[#f9f9f8] dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[11px] text-stone-900 dark:text-stone-100 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-600"
                   />
                   <button
                     type="button"
                     onClick={handleCreateFolder}
-                    className="px-2 py-1 text-[11px] rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42]"
+                    className="px-2 py-1 text-[11px] rounded-md bg-amber-600 text-white hover:bg-amber-700"
                   >
                     Save
                   </button>
                   <button
                     type="button"
                     onClick={handleCancelNewFolder}
-                    className="px-1.5 py-1 text-[11px] rounded-md text-gray-300 hover:text-white"
+                    className="px-1.5 py-1 text-[11px] rounded-md text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
                   >
                     ×
                   </button>
@@ -1193,10 +1074,10 @@ export default function InventoryPage() {
                 }}
                 className={`flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium border-l-2 transition-colors transition-transform duration-150 ${
                   activeFolderId === 'all' || dragOverFolderId === 'all'
-                    ? 'border-[#ff6b35] bg-[#222222] text-gray-100 translate-x-0.5 shadow-md shadow-black/40 ring-1 ring-[#ff6b35]/60'
+                    ? 'border-amber-600 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 translate-x-0.5 shadow-md shadow-stone-200 ring-1 ring-amber-600/60'
                     : isDraggingFolder
-                      ? 'border-[#555555] bg-[#1f1f1f] text-gray-100'
-                      : 'border-transparent text-gray-200 hover:bg-[#222222]'
+                      ? 'border-stone-300 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100'
+                      : 'border-transparent text-stone-800 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -1220,15 +1101,15 @@ export default function InventoryPage() {
                   <span>All items</span>
                 </span>
                 {dragOverFolderId === 'all' ? (
-                  <span className="ml-2 text-[10px] text-[#ffb68a]">Drop to move folder to top level</span>
+                  <span className="ml-2 text-[10px] text-amber-500">Drop to move folder to top level</span>
                 ) : isDraggingFolder ? (
-                  <span className="ml-2 text-[10px] text-gray-400">Drag here to move folder to top level</span>
+                  <span className="ml-2 text-[10px] text-stone-500">Drag here to move folder to top level</span>
                 ) : null}
               </button>
 
               <div className="mt-1 space-y-0 text-sm">
                 {folderTree.length === 0 ? (
-                  <p className="text-[11px] text-gray-500 px-4 pt-1">
+                  <p className="text-[11px] text-stone-400 px-4 pt-1">
                     No folders yet. Products will appear here once categories are added.
                   </p>
                 ) : (
@@ -1284,8 +1165,8 @@ export default function InventoryPage() {
                         }}
                         className={`flex items-center justify-between w-full py-2.5 border-l-2 transition-colors transition-transform duration-150 ${
                           activeFolderId === folder.id || dragOverFolderId === folder.id
-                            ? 'border-[#ff6b35] bg-[#202020] text-gray-100 translate-x-0.5 shadow-md shadow-black/40 ring-1 ring-[#ff6b35]/60'
-                            : 'border-transparent text-gray-300 hover:bg-[#202020]'
+                            ? 'border-amber-600 bg-stone-100 text-stone-900 translate-x-0.5 shadow-md shadow-stone-200 ring-1 ring-amber-600/60'
+                            : 'border-transparent text-stone-600 hover:bg-stone-100'
                         } ${isCustom ? 'cursor-move' : ''}`}
                         style={{ paddingLeft }}
                       >
@@ -1296,11 +1177,11 @@ export default function InventoryPage() {
                         >
                           {folder.depth > 0 && (
                             <span
-                              className="self-stretch border-l border-[#333333] mr-1"
+                              className="self-stretch border-l border-stone-200 mr-1"
                               aria-hidden="true"
                             />
                           )}
-                          <span className="inline-flex h-5 w-5 items-center justify-center text-gray-300">
+                          <span className="inline-flex h-5 w-5 items-center justify-center text-stone-600">
                             {/* Nested folder icon */}
                             <svg
                               className="h-4 w-4"
@@ -1320,7 +1201,7 @@ export default function InventoryPage() {
                           <span className="truncate">{folder.name}</span>
                         </button>
 
-                        <div className="flex items-center gap-1 text-[10px] text-gray-300 pr-2">
+                        <div className="flex items-center gap-1 text-[10px] text-stone-600 pr-2">
                           {isCustom && hasChildren && (
                             <button
                               type="button"
@@ -1328,7 +1209,7 @@ export default function InventoryPage() {
                                 e.stopPropagation();
                                 toggleFolderCollapsed(folder.id);
                               }}
-                              className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-[#333333] focus:outline-none"
+                              className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-amber-50 focus:outline-none"
                               aria-label={collapsedFolders[folder.id] ? 'Expand folder' : 'Collapse folder'}
                             >
                               <svg
@@ -1350,7 +1231,7 @@ export default function InventoryPage() {
                             </button>
                           )}
                           {dragOverFolderId === folder.id && (
-                            <span className="px-2 py-0.5 rounded-full bg-[#ff6b35]/15 text-[#ffb68a] border border-[#ff6b35]/40">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-500 border border-amber-200">
                               Drop to move here
                             </span>
                           )}
@@ -1358,7 +1239,7 @@ export default function InventoryPage() {
                             <button
                               type="button"
                               onClick={() => handleDeleteFolder(folder.id)}
-                              className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full text-xs text-gray-300 hover:text-white hover:bg-red-600/60"
+                              className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full text-xs text-stone-400 hover:text-red-500 hover:bg-red-50"
                               aria-label="Delete folder"
                             >
                               ×
@@ -1373,128 +1254,55 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          {/* Main grid and toolbar */}
-          <div className="md:col-span-3 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                <span className="uppercase tracking-wide text-[10px] text-gray-500">Location</span>
-                <span className="text-gray-500">/</span>
-                <button
-                  type="button"
-                  onClick={() => setActiveFolderId('all')}
-                  className={`px-2 py-0.5 rounded-md ${
-                    activeFolderId === 'all'
-                      ? 'bg-[#ff6b35] text-white'
-                      : 'text-gray-200 hover:bg-[#252525]'
-                  }`}
-                >
-                  All items
-                </button>
-                {activeFolderPath.map((segment, index) => (
-                  <span key={segment.id} className="flex items-center gap-2">
-                    <span className="text-gray-500">/</span>
-                    {index === activeFolderPath.length - 1 ? (
-                      <span className="px-2 py-0.5 rounded-md bg-[#ff6b35] text-white font-semibold">
-                        {segment.name}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">{segment.name}</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <div className="inline-flex rounded-lg border border-[#3a3a3a] bg-[#2a2a2a] p-0.5">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      viewMode === 'grid'
-                        ? 'bg-[#ff6b35] text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
-                    }`}
-                    title="Grid view"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      viewMode === 'table'
-                        ? 'bg-[#ff6b35] text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
-                    }`}
-                    title="Table view"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => router.push('/inventory/new')}
-                  className="px-3 py-1.5 rounded-md border border-[#3a3a3a] bg-[#2a2a2a] text-gray-100 hover:bg-[#3a3a3a]"
-                >
-                  New item
-                </button>
-              </div>
-            </div>
-
+          {/* Main scrollable content */}
+          <div className="flex-1 overflow-y-auto min-w-0 px-3 sm:px-4 lg:px-6 py-4">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#ff6b35]"></div>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
               </div>
             ) : visibleItems.length === 0 ? (
-              <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg p-8 text-center text-sm text-gray-300">
+              <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg p-8 text-center text-sm text-stone-600 dark:text-stone-400">
                 No products match this search or folder.
               </div>
             ) : viewMode === 'table' ? (
-              <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-[#3a3a3a]">
-                    <thead className="bg-[#1a1a1a]">
+              <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg overflow-hidden">
+                  <table className="w-full divide-y divide-stone-200 dark:divide-stone-700">
+                    <thead className="bg-[#f9f9f8] dark:bg-stone-900">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                           Product
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                          Supplier
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                          SKU
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        {foldersPanelCollapsed && (
+                          <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider whitespace-nowrap">
+                            SKU
+                          </th>
+                        )}
+                        <th className="px-4 py-3 text-right text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider whitespace-nowrap w-20">
                           In Hand
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider whitespace-nowrap w-20">
                           In Transit
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                          Avg Cost
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                          Total Value
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                          Actions
+                        {foldersPanelCollapsed && (
+                          <th className="hidden lg:table-cell px-4 py-3 text-right text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider whitespace-nowrap w-24">
+                            Avg Cost
+                          </th>
+                        )}
+                        <th className="px-4 py-3 text-right text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider w-12">
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#3a3a3a]">
+                    <tbody className="divide-y divide-stone-200 dark:divide-stone-700">
                       {visibleItems.map((row) => {
-                        const totalQty = (row.inventory?.quantityOnHand || 0) + (row.quantityInTransit || 0);
-                        const totalValue = totalQty * (row.inventory?.averageCostGBP || 0);
                         return (
                           <tr
                             key={row.product.id}
-                            className="hover:bg-[#1a1a1a] cursor-pointer transition-colors"
+                            className="hover:border-l-2 hover:border-l-amber-600 dark:hover:bg-stone-700/20 cursor-pointer transition-colors"
                             onClick={() => router.push(`/inventory/${row.product.id}`)}
                           >
-                            <td className="px-4 py-3 text-sm text-gray-100">
+                            <td className="px-4 py-3 text-sm text-stone-900 dark:text-stone-100">
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-md bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-xs font-bold text-gray-200 uppercase flex-shrink-0">
+                                <div className="h-9 w-9 rounded-md bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center text-[10px] font-bold text-stone-800 dark:text-stone-200 uppercase flex-shrink-0">
                                   {row.product.name
                                     .split(' ')
                                     .filter(Boolean)
@@ -1504,35 +1312,29 @@ export default function InventoryPage() {
                                     .toUpperCase() || 'PR'}
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="font-medium text-gray-100 truncate">{row.product.name}</div>
-                                  {row.product.category && (
-                                    <div className="text-xs text-gray-400">{row.product.category}</div>
+                                  <div className="font-medium text-stone-900 dark:text-stone-100 truncate">{row.product.name}</div>
+                                  {row.supplier?.name && (
+                                    <div className="text-xs text-stone-400 dark:text-stone-500">{row.supplier.name}</div>
                                   )}
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-300">
-                              {row.supplier?.name || 'Unknown'}
+                            {foldersPanelCollapsed && (
+                              <td className="hidden lg:table-cell px-4 py-3 text-sm text-stone-500 dark:text-stone-400 font-mono truncate max-w-[140px]">
+                                {row.product.primarySku || row.product.supplierSku || '-'}
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-sm text-right tabular-nums text-stone-900 dark:text-stone-100 font-medium whitespace-nowrap">
+                              {row.inventory?.quantityOnHand || 0}
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-400 font-mono">
-                              {row.product.primarySku || row.product.supplierSku || '-'}
+                            <td className="px-4 py-3 text-sm text-right tabular-nums text-stone-500 dark:text-stone-400 whitespace-nowrap">
+                              {row.quantityInTransit || 0}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#1f2a1f] text-green-300 border border-green-500/40">
-                                {row.inventory?.quantityOnHand || 0}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#1f1f1f] text-gray-200 border border-[#3a3a3a]">
-                                {row.quantityInTransit || 0}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-100 text-right font-mono">
-                              £{(row.inventory?.averageCostGBP || 0).toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-100 text-right font-mono">
-                              £{totalValue.toFixed(2)}
-                            </td>
+                            {foldersPanelCollapsed && (
+                              <td className="hidden lg:table-cell px-4 py-3 text-sm text-stone-900 dark:text-stone-100 text-right font-mono tabular-nums whitespace-nowrap">
+                                £{(row.inventory?.averageCostGBP || 0).toFixed(2)}
+                              </td>
+                            )}
                             <td className="px-4 py-3 text-sm text-right">
                               <button
                                 type="button"
@@ -1541,7 +1343,7 @@ export default function InventoryPage() {
                                   handleDeleteProduct(row.product);
                                 }}
                                 disabled={deletingProductId === row.product.id}
-                                className="inline-flex items-center justify-center p-1.5 rounded-md text-red-300 hover:bg-[#3a1f1f] disabled:opacity-50"
+                                className="inline-flex items-center justify-center p-1.5 rounded-md text-stone-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-50"
                                 aria-label="Delete product"
                               >
                                 {deletingProductId === row.product.id ? (
@@ -1587,118 +1389,69 @@ export default function InventoryPage() {
                       })}
                     </tbody>
                   </table>
-                </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${
+                foldersPanelCollapsed ? 'lg:grid-cols-3 xl:grid-cols-4' : 'xl:grid-cols-3'
+              }`}>
                 {visibleItems.map((row) => {
-                  const hasOnHand = !!row.inventory && row.inventory.quantityOnHand > 0;
-                  const isAddingBarcode = barcodeProductId === row.product.id;
+                  const onHand = row.inventory?.quantityOnHand || 0;
+                  const inTransit = row.quantityInTransit || 0;
+                  const initials = row.product.name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || 'PR';
 
-                  const initials = row.product.name
-                    .split(' ')
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((word) => word[0])
-                    .join('')
-                    .toUpperCase();
-                  const isLongName = (row.product.name || '').length > 40;
                   return (
                     <div
                       key={row.product.id}
-                      className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-[#ff6b35] transition-colors"
+                      className="group bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg overflow-hidden cursor-pointer hover:border-amber-600 dark:hover:border-amber-600 hover:shadow-sm transition-all duration-200 flex flex-col"
                       onClick={() => router.push(`/inventory/${row.product.id}`)}
                       draggable
                       onDragStart={(e) => handleProductDragStart(e, row.product)}
                     >
-                      <div className="relative">
-                        <div className="h-24 sm:h-28 rounded-md bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-lg sm:text-xl font-bold text-gray-200 uppercase">
-                          {initials || 'PR'}
-                        </div>
+                      <div className="h-28 bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center border-b border-stone-100 dark:border-stone-700">
+                        <span className="text-2xl font-bold text-stone-300 dark:text-stone-500 uppercase tracking-wider">{initials}</span>
                       </div>
-                      <div className="flex-1">
-                        <div className="block">
-                          <h3
-                            className={`font-semibold text-gray-100 break-words ${
-                              isLongName ? 'text-xs leading-snug' : 'text-sm'
-                            }`}
+                      <div className="p-3 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-2 flex-1 mb-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-medium text-stone-900 dark:text-stone-100 leading-snug group-hover:text-amber-700 dark:group-hover:text-amber-500 transition-colors">
+                              {row.product.name}
+                            </h3>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProduct(row.product);
+                            }}
+                            disabled={deletingProductId === row.product.id}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded text-stone-300 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50 flex-shrink-0"
+                            aria-label="Delete product"
                           >
-                            {row.product.name}
-                          </h3>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {row.supplier?.name || 'Unknown supplier'}
-                          </p>
+                            {deletingProductId === row.product.id ? (
+                              <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            ) : (
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            )}
+                          </button>
                         </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-sm mt-2">
-                        <div className="flex flex-wrap gap-3">
-                          <span className="px-3 py-1 rounded-full bg-[#1f2a1f] text-green-300 border border-green-500/40 font-medium tracking-tight">
-                            In hand: {row.inventory?.quantityOnHand || 0}
-                          </span>
-                          <span className="px-3 py-1 rounded-full bg-[#1f1f1f] text-gray-200 border border-[#3a3a3a] font-medium tracking-tight">
-                            Transit: {row.quantityInTransit}
-                          </span>
+                        <p className="text-xs text-stone-400 dark:text-stone-500 mt-auto">
+                          {row.supplier?.name || 'Unknown supplier'}
+                        </p>
+                        <div className="flex items-baseline gap-4 pt-2 mt-2 border-t border-stone-100 dark:border-stone-700">
+                          <div>
+                            <span className="text-sm font-medium text-green-700 tabular-nums">{onHand}</span>
+                            <span className="text-[10px] text-green-600 ml-1 uppercase tracking-wide">in hand</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-amber-600 tabular-nums">{inTransit}</span>
+                            <span className="text-[10px] text-amber-500 ml-1 uppercase tracking-wide">in transit</span>
+                          </div>
                         </div>
-                      </div>
-
-                      {/* Actions (barcode controls temporarily hidden) */}
-                      <div className="flex flex-col gap-2 mt-1">
-                        <div className="flex items-center justify-end gap-2 mt-1">
-                          {hasOnHand && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1a3a1a] text-green-300">
-                              In stock
-                            </span>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProduct(row.product);
-                          }}
-                          disabled={deletingProductId === row.product.id}
-                          className="mt-1 inline-flex items-center justify-center px-2.5 py-1.5 rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50"
-                          aria-label={deletingProductId === row.product.id ? 'Deleting product' : 'Delete product'}
-                        >
-                          {deletingProductId === row.product.id ? (
-                            <svg
-                              className="animate-spin h-4 w-4"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                          ) : (
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          )}
-                        </button>
                       </div>
                     </div>
                   );
@@ -1710,7 +1463,7 @@ export default function InventoryPage() {
       </div>
 
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-xs px-3 py-2 rounded-md bg-[#222222] border border-[#3a3a3a] text-xs text-gray-100 shadow-lg shadow-black/40">
+        <div className="fixed bottom-6 right-6 z-50 max-w-xs px-3 py-2 rounded-md bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs text-stone-900 dark:text-stone-100 shadow-lg shadow-stone-200">
           {toastMessage}
         </div>
       )}

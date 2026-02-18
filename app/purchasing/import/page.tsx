@@ -593,30 +593,30 @@ function ImportPageContent() {
   };
 
   return (
-      <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-12 px-3 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-12 px-3 sm:px-6 lg:px-8">
         <div className="max-w-[1600px] mx-auto">
         {/* Navigation Header */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">
               Purchase Order Import
             </h1>
-            <p className="text-sm sm:text-base text-gray-300">
+            <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400">
               Upload invoice files and group them before AI analysis
             </p>
-            <p className="text-xs sm:text-sm text-[#ff6b35] font-medium mt-2 hidden sm:block">
-              💡 Tip: Drag files between groups to merge multiple pages into one purchase order
+            <p className="text-xs sm:text-sm text-amber-600 font-medium mt-2 hidden sm:block">
+              Tip: Drag files between groups to merge multiple pages into one purchase order
             </p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-3">
-            <div className="inline-flex items-center rounded-lg border border-[#3a3a3a] bg-[#141414] p-1 w-full sm:w-auto">
+            <div className="inline-flex items-center rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-1 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setMode('import')}
                 className={`flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   mode === 'import'
-                    ? 'bg-[#ff6b35] text-white shadow-md'
-                    : 'text-gray-300 hover:text-gray-100 hover:bg-[#242424]'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700'
                 }`}
               >
                 Import
@@ -626,8 +626,8 @@ function ImportPageContent() {
                 onClick={() => setMode('manual')}
                 className={`flex-1 sm:flex-none ml-1 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                   mode === 'manual'
-                    ? 'bg-[#ff6b35] text-white shadow-md'
-                    : 'text-gray-300 hover:text-gray-100 hover:bg-[#242424]'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700'
                 }`}
               >
                 Manual
@@ -635,7 +635,7 @@ function ImportPageContent() {
             </div>
             <button
               onClick={navigateToView}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -647,10 +647,10 @@ function ImportPageContent() {
         {mode === 'import' && (
           <>
             {/* Upload Form */}
-            <div className="bg-[#2a2a2a] rounded-lg shadow-md p-4 sm:p-6 mb-6 border border-[#3a3a3a]">
+            <div className="bg-white dark:bg-stone-800 rounded-lg shadow-md p-4 sm:p-6 mb-6 border border-stone-200 dark:border-stone-700">
               <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-200 mb-3">
+              <label className="block text-sm font-medium text-stone-800 dark:text-stone-200 mb-3">
                 Upload Invoice Files (PNG, JPG, or PDF)
               </label>
 
@@ -661,8 +661,8 @@ function ImportPageContent() {
                 onDrop={handleDrop}
                 className={`relative border-2 border-dashed rounded-lg transition-all ${
                   isDragging
-                    ? 'border-[#ff6b35] bg-[#3a3a3a]'
-                    : 'border-[#3a3a3a] bg-[#1a1a1a] hover:border-[#4a4a4a]'
+                    ? 'border-amber-600 bg-stone-100 dark:bg-stone-700'
+                    : 'border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 hover:border-stone-300 dark:hover:border-stone-600'
                 } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 <input
@@ -677,7 +677,7 @@ function ImportPageContent() {
 
                 <div className="py-12 px-6 text-center">
                   <svg
-                    className={`mx-auto h-16 w-16 ${isDragging ? 'text-[#ff6b35]' : 'text-gray-500'}`}
+                    className={`mx-auto h-16 w-16 ${isDragging ? 'text-amber-600' : 'text-stone-400'}`}
                     stroke="currentColor"
                     fill="none"
                     viewBox="0 0 48 48"
@@ -690,13 +690,13 @@ function ImportPageContent() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <div className="mt-4 flex text-sm leading-6 text-gray-300 justify-center">
-                    <span className="font-semibold text-[#ff6b35] hover:text-[#ff8c42]">
+                  <div className="mt-4 flex text-sm leading-6 text-stone-600 dark:text-stone-400 justify-center">
+                    <span className="font-semibold text-amber-600 hover:text-amber-700">
                       Click to upload
                     </span>
                     <span className="pl-1">or drag and drop</span>
                   </div>
-                  <p className="text-xs leading-5 text-gray-400 mt-2">
+                  <p className="text-xs leading-5 text-stone-500 dark:text-stone-400 mt-2">
                     PNG, JPG, or PDF files
                   </p>
                 </div>
@@ -707,14 +707,14 @@ function ImportPageContent() {
             {fileGroups.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-100">
+                  <h3 className="text-sm font-medium text-stone-900 dark:text-stone-100">
                     File Groups ({fileGroups.length})
                   </h3>
                   {!loading && (
                     <button
                       type="button"
                       onClick={() => setFileGroups([])}
-                      className="text-sm text-[#ff6b35] hover:text-[#ff8c42] font-medium"
+                      className="text-sm text-amber-600 hover:text-amber-700 font-medium"
                     >
                       Clear All
                     </button>
@@ -736,20 +736,20 @@ function ImportPageContent() {
                       onDrop={(e) => handleGroupDrop(e, group.id)}
                       className={`border-2 rounded-lg p-4 transition-all relative ${
                         dragOverGroup === group.id
-                          ? 'border-[#ff6b35] bg-[#3a3a3a]'
+                          ? 'border-amber-600 bg-stone-100 dark:bg-stone-700'
                           : isExtracted
-                          ? 'border-green-500 bg-[#2a3a2a]'
+                          ? 'border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800'
                           : hasError
-                          ? 'border-red-500 bg-[#3a2a2a]'
+                          ? 'border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800'
                           : isProcessing
-                          ? 'border-[#ff8c42] bg-[#3a3a3a]'
-                          : 'border-[#3a3a3a] bg-[#2a2a2a]'
+                          ? 'border-amber-500 bg-stone-100 dark:bg-stone-700'
+                          : 'border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800'
                       }`}
                     >
                       {/* Status Badge */}
                       {isExtracted && (
                         <div className="absolute top-2 right-2">
-                          <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
@@ -768,17 +768,17 @@ function ImportPageContent() {
                           value={group.name}
                           onChange={(e) => handleRenameGroup(group.id, e.target.value)}
                           disabled={loading}
-                          className="w-full text-sm font-medium text-gray-100 bg-transparent border-b border-transparent hover:border-[#3a3a3a] focus:border-[#ff6b35] focus:outline-none px-1 py-1"
+                          className="w-full text-sm font-medium text-stone-900 dark:text-stone-100 bg-transparent border-b border-transparent hover:border-stone-200 dark:hover:border-stone-600 focus:border-amber-600 focus:outline-none px-1 py-1"
                         />
                         <div className="flex items-center justify-between mt-1">
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-stone-500 dark:text-stone-400">
                             {group.files.length} file{group.files.length !== 1 ? 's' : ''}
                           </p>
                           <button
                             type="button"
                             onClick={() => handleAnalyzeGroup(group.id)}
                             disabled={loading || groupResults.some(r => r.group.id === group.id && (r.status === 'processing' || r.status === 'extracted' || r.status === 'success'))}
-                            className="text-xs px-2 py-1 bg-[#ff6b35] text-white rounded hover:bg-[#ff8c42] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {groupResults.find(r => r.group.id === group.id)?.status === 'processing' ? 'Analyzing...' : 'Analyze'}
                           </button>
@@ -792,21 +792,21 @@ function ImportPageContent() {
                             key={fileIndex}
                             draggable={!loading}
                             onDragStart={() => handleFileDragStart(group.id, fileIndex)}
-                            className={`flex items-center justify-between p-2 bg-[#1a1a1a] rounded border border-[#3a3a3a] ${
-                              !loading ? 'cursor-move hover:bg-[#2a2a2a]' : ''
+                            className={`flex items-center justify-between p-2 bg-[#f9f9f8] dark:bg-stone-900 rounded border border-stone-200 dark:border-stone-700 ${
+                              !loading ? 'cursor-move hover:bg-white' : ''
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-4 h-4 text-stone-400 dark:text-stone-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
-                              <span className="text-xs text-gray-300 truncate">{file.name}</span>
+                              <span className="text-xs text-stone-600 dark:text-stone-400 truncate">{file.name}</span>
                             </div>
                             {!loading && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFile(group.id, fileIndex)}
-                                className="text-[#ff6b35] hover:text-[#ff8c42] p-1 rounded hover:bg-[#3a3a3a] transition-colors flex-shrink-0"
+                                className="text-amber-600 hover:text-amber-700 p-1 rounded hover:bg-stone-100 transition-colors flex-shrink-0"
                               >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -827,7 +827,7 @@ function ImportPageContent() {
             <button
               type="submit"
               disabled={fileGroups.length === 0 || loading}
-              className="w-full bg-[#ff6b35] text-white py-2 px-4 rounded-lg font-medium hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-[#ff6b35] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -866,7 +866,7 @@ function ImportPageContent() {
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <svg
-                  className="h-5 w-5 text-green-400"
+                  className="h-5 w-5 text-green-600"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
                   fill="currentColor"
@@ -884,7 +884,7 @@ function ImportPageContent() {
               </div>
               <button
                 onClick={() => setSuccessMessage(null)}
-                className="flex-shrink-0 ml-3 text-green-400 hover:text-green-600"
+                className="flex-shrink-0 ml-3 text-green-600 hover:text-green-600"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -900,7 +900,7 @@ function ImportPageContent() {
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg
-                  className="h-5 w-5 text-red-400"
+                  className="h-5 w-5 text-red-600"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
                   fill="currentColor"
@@ -930,16 +930,16 @@ function ImportPageContent() {
               }
               
               return (
-              <div key={index} className="bg-[#2a2a2a] rounded-lg shadow-md p-6 border border-[#3a3a3a]">
+              <div key={index} className="bg-white dark:bg-stone-800 rounded-lg shadow-md p-6 border border-stone-200 dark:border-stone-700">
                 <div className="flex items-center gap-2 mb-4">
                   {result.status === 'processing' && (
-                    <svg className="animate-spin h-5 w-5 text-[#ff6b35]" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   )}
                   {result.status === 'extracted' && (
-                    <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
@@ -948,14 +948,14 @@ function ImportPageContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
-                  <h3 className="text-lg font-semibold text-gray-100">{result.group.name}</h3>
-                  <span className="text-sm text-gray-400">
+                  <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">{result.group.name}</h3>
+                  <span className="text-sm text-stone-500 dark:text-stone-400">
                     ({result.group.files.length} file{result.group.files.length !== 1 ? 's' : ''})
                   </span>
                 </div>
 
                 {result.status === 'processing' && (
-                  <p className="text-sm text-gray-300">Analyzing files...</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Analyzing files...</p>
                 )}
 
                 {result.status === 'error' && (
@@ -969,10 +969,10 @@ function ImportPageContent() {
                   <div className="space-y-6">
                     {/* Duplicate Warning */}
                     {result.duplicates && result.duplicates.length > 0 && !dismissedDuplicates.has(result.group.id) && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                         <div className="flex items-start">
                           <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                           </div>
@@ -998,7 +998,7 @@ function ImportPageContent() {
                           </div>
                           <button
                             onClick={() => setDismissedDuplicates(prev => new Set(prev).add(result.group.id))}
-                            className="flex-shrink-0 ml-3 text-yellow-400 hover:text-yellow-600 transition-colors"
+                            className="flex-shrink-0 ml-3 text-yellow-600 hover:text-yellow-700 transition-colors"
                             title="Dismiss warning"
                           >
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1011,51 +1011,51 @@ function ImportPageContent() {
 
                     {/* Supplier Information */}
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-100 mb-3">Supplier Information</h4>
+                      <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-3">Supplier Information</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Supplier Name *</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Supplier Name *</label>
                           <input
                             type="text"
                             value={getEditableData(index)?.supplier.name || ''}
                             onChange={(e) => updateField(index, 'supplier.name', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Email</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Email</label>
                           <input
                             type="email"
                             value={getEditableData(index)?.supplier.email || ''}
                             onChange={(e) => updateField(index, 'supplier.email', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Phone</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Phone</label>
                           <input
                             type="text"
                             value={getEditableData(index)?.supplier.phone || ''}
                             onChange={(e) => updateField(index, 'supplier.phone', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">VAT Number</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">VAT Number</label>
                           <input
                             type="text"
                             value={getEditableData(index)?.supplier.vatNumber || ''}
                             onChange={(e) => updateField(index, 'supplier.vatNumber', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div className="col-span-2">
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Address</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Address</label>
                           <textarea
                             value={getEditableData(index)?.supplier.address || ''}
                             onChange={(e) => updateField(index, 'supplier.address', e.target.value)}
                             rows={2}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                       </div>
@@ -1063,55 +1063,55 @@ function ImportPageContent() {
 
                     {/* Purchase Order Information */}
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-100 mb-3">Purchase Order Details</h4>
+                      <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-3">Purchase Order Details</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Invoice Number</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Invoice Number</label>
                           <input
                             type="text"
                             value={getEditableData(index)?.purchaseOrder.invoiceNumber || ''}
                             onChange={(e) => updateField(index, 'purchaseOrder.invoiceNumber', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Invoice Date</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Invoice Date</label>
                           <input
                             type="date"
                             value={getEditableData(index)?.purchaseOrder.invoiceDate || ''}
                             onChange={(e) => updateField(index, 'purchaseOrder.invoiceDate', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Currency</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Currency</label>
                           <input
                             type="text"
                             value={getEditableData(index)?.purchaseOrder.originalCurrency || ''}
                             onChange={(e) => updateField(index, 'purchaseOrder.originalCurrency', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Payment Terms</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Payment Terms</label>
                           <input
                             type="text"
                             value={getEditableData(index)?.purchaseOrder.paymentTerms || ''}
                             onChange={(e) => updateField(index, 'purchaseOrder.paymentTerms', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                       </div>
                       
                       {/* Notes Field */}
                       <div className="mt-4">
-                        <label className="block text-xs font-semibold text-gray-300 mb-1">Notes</label>
+                        <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Notes</label>
                         <textarea
                           value={getEditableData(index)?.notes || ''}
                           onChange={(e) => updateField(index, 'notes', e.target.value)}
                           rows={3}
                           placeholder="Add notes or special instructions for receiving and booking in stock"
-                          className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                         />
                       </div>
                     </div>
@@ -1119,11 +1119,11 @@ function ImportPageContent() {
                     {/* Line Items Table */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-semibold text-gray-100">Line Items</h4>
+                        <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Line Items</h4>
                         <button
                           type="button"
                           onClick={() => addLineItem(index)}
-                          className="inline-flex items-center px-3 py-1 text-xs font-medium text-white bg-[#ff6b35] rounded-md hover:bg-[#ff8c42]"
+                          className="inline-flex items-center px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700"
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1132,20 +1132,20 @@ function ImportPageContent() {
                         </button>
                       </div>
                       
-                      <div className="overflow-x-auto border border-[#3a3a3a] rounded-lg">
-                        <table className="min-w-full divide-y divide-[#3a3a3a]">
-                          <thead className="bg-[#1a1a1a]">
+                      <div className="overflow-x-auto border border-stone-200 dark:border-stone-700 rounded-lg">
+                        <table className="min-w-full divide-y divide-stone-200 dark:divide-stone-700">
+                          <thead className="bg-[#f9f9f8] dark:bg-stone-900">
                             <tr>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase">Description</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase">SKU</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-24">Qty</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-32">Unit Price</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-32">Line Total</th>
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 uppercase w-32">RRP</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase">Description</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase">SKU</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase w-24">Qty</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase w-32">Unit Price</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase w-32">Line Total</th>
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase w-32">RRP</th>
                               <th className="px-3 py-2 w-10"></th>
                             </tr>
                           </thead>
-                          <tbody className="bg-[#2a2a2a] divide-y divide-[#3a3a3a]">
+                          <tbody className="bg-white dark:bg-stone-800 divide-y divide-stone-200 dark:divide-stone-700">
                             {getEditableData(index)?.poLines.map((line, lineIndex) => (
                               <tr key={lineIndex}>
                                 <td className="px-3 py-2">
@@ -1153,7 +1153,7 @@ function ImportPageContent() {
                                     type="text"
                                     value={line.description}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'description', e.target.value)}
-                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -1161,7 +1161,7 @@ function ImportPageContent() {
                                     type="text"
                                     value={line.supplierSku || ''}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'supplierSku', e.target.value)}
-                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -1169,7 +1169,7 @@ function ImportPageContent() {
                                     type="number"
                                     value={line.quantity}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'quantity', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -1178,7 +1178,7 @@ function ImportPageContent() {
                                     step="0.01"
                                     value={line.unitCostExVAT}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -1187,7 +1187,7 @@ function ImportPageContent() {
                                     step="0.01"
                                     value={line.lineTotalExVAT}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'lineTotalExVAT', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -1197,14 +1197,14 @@ function ImportPageContent() {
                                     value={line.rrp || ''}
                                     onChange={(e) => updateLineItem(index, lineIndex, 'rrp', parseFloat(e.target.value) || null)}
                                     placeholder="Optional"
-                                    className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#1a1a1a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                    className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
                                   <button
                                     type="button"
                                     onClick={() => removeLineItem(index, lineIndex)}
-                                    className="text-[#ff6b35] hover:text-[#ff8c42]"
+                                    className="text-amber-600 hover:text-amber-700"
                                   >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1219,47 +1219,47 @@ function ImportPageContent() {
                     </div>
 
                     {/* Totals */}
-                    <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#3a3a3a]">
-                      <h4 className="text-sm font-semibold text-gray-100 mb-3">Totals</h4>
+                    <div className="bg-[#f9f9f8] dark:bg-stone-900 rounded-lg p-4 border border-stone-200 dark:border-stone-700">
+                      <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-3">Totals</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Subtotal (ex VAT) - GBP</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Subtotal (ex VAT) - GBP</label>
                           <input
                             type="number"
                             step="0.01"
                             value={getEditableData(index)?.totals.subtotal || 0}
                             onChange={(e) => updateField(index, 'totals.subtotal', parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Extras (Shipping, etc.) - GBP</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Extras (Shipping, etc.) - GBP</label>
                           <input
                             type="number"
                             step="0.01"
                             value={getEditableData(index)?.totals.extras || 0}
                             onChange={(e) => updateField(index, 'totals.extras', parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">VAT - GBP</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">VAT - GBP</label>
                           <input
                             type="number"
                             step="0.01"
                             value={getEditableData(index)?.totals.vat || 0}
                             onChange={(e) => updateField(index, 'totals.vat', parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-300 mb-1">Total - GBP</label>
+                          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1">Total - GBP</label>
                           <input
                             type="number"
                             step="0.01"
                             value={getEditableData(index)?.totals.total || 0}
                             onChange={(e) => updateField(index, 'totals.total', parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
                           />
                         </div>
                       </div>
@@ -1270,7 +1270,7 @@ function ImportPageContent() {
                       <button
                         type="button"
                         onClick={() => handleDeleteResult(result.group.id)}
-                        className="px-6 py-2 bg-[#3a3a3a] text-gray-100 rounded-md hover:bg-[#4a4a4a] focus:outline-none focus:ring-2 focus:ring-[#ff6b35] font-medium"
+                        className="px-6 py-2 bg-stone-100 dark:bg-stone-700 text-stone-900 dark:text-stone-100 rounded-md hover:bg-stone-200 dark:hover:bg-stone-600 focus:outline-none focus:ring-2 focus:ring-amber-600 font-medium"
                       >
                         Cancel
                       </button>
@@ -1278,7 +1278,7 @@ function ImportPageContent() {
                         type="button"
                         onClick={() => handleSavePurchaseOrder(result.group.id)}
                         disabled={savingIndex === index}
-                        className="px-6 py-2 bg-[#ff6b35] text-white rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-[#ff6b35] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {savingIndex === index ? 'Saving...' : 'Save Purchase Order'}
                       </button>
@@ -1294,11 +1294,11 @@ function ImportPageContent() {
         )}
 
         {mode === 'manual' && (
-          <div className="bg-[#2a2a2a] rounded-lg shadow-md p-6 mb-6 border border-[#3a3a3a]">
-            <h2 className="text-xl font-semibold text-gray-100 mb-2">
+          <div className="bg-white dark:bg-stone-800 rounded-lg shadow-md p-6 mb-6 border border-stone-200 dark:border-stone-700">
+            <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-100 mb-2">
               Manual Purchase Order Entry
             </h2>
-            <p className="text-sm text-gray-300 mb-4">
+            <p className="text-sm text-stone-600 dark:text-stone-400 mb-4">
               Enter purchase order details manually when you do not have an invoice file to upload.
             </p>
             {successMessage && (
@@ -1306,7 +1306,7 @@ function ImportPageContent() {
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
                     <svg
-                      className="h-5 w-5 text-green-400"
+                      className="h-5 w-5 text-green-600"
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
                       fill="currentColor"
@@ -1324,7 +1324,7 @@ function ImportPageContent() {
                   </div>
                   <button
                     onClick={() => setSuccessMessage(null)}
-                    className="flex-shrink-0 ml-3 text-green-400 hover:text-green-600"
+                    className="flex-shrink-0 ml-3 text-green-600 hover:text-green-600"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1367,7 +1367,7 @@ export default function ImportPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center text-gray-100">
+        <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 flex items-center justify-center text-stone-900 dark:text-stone-100">
           Loading purchase order import...
         </div>
       }

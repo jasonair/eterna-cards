@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface NavItem {
   href: string;
@@ -150,6 +151,7 @@ function isActivePath(pathname: string | null, href: string) {
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     await signOut();
@@ -157,7 +159,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`hidden sm:flex sm:fixed sm:inset-y-0 sm:left-0 flex-col bg-[#141414] border-r border-[#2a2a2a] text-gray-400 z-30 transition-[width] duration-200 ${
+      className={`hidden sm:flex sm:fixed sm:inset-y-0 sm:left-0 flex-col bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 text-stone-500 z-30 transition-[width] duration-200 ${
         collapsed ? 'w-24' : 'w-48 lg:w-56'
       }`}
     >
@@ -165,7 +167,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <button
           type="button"
           onClick={onToggle}
-          className="hidden sm:flex absolute top-1/2 -right-4 h-8 w-8 -translate-y-1/2 transform items-center justify-center rounded-full border border-[#2a2a2a] bg-[#1b1b1b] hover:bg-[#222222] text-gray-300 shadow-md transition-colors"
+          className="hidden sm:flex absolute top-1/2 -right-4 h-8 w-8 -translate-y-1/2 transform items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-400 shadow-sm transition-colors"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
         >
@@ -186,18 +188,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </button>
         {/* Top: toggle + logo + main navigation */}
         <div className="flex flex-col items-start gap-4 w-full">
-          <div className="w-full flex items-start justify-center px-3">
-            <div
-              className={`rounded-full bg-[#ff6b35] overflow-hidden flex items-center justify-center shadow-lg transition-all duration-200 ${
-                collapsed ? 'h-10 w-10' : 'h-16 w-16'
-              }`}
-            >
-              <img
-                src="/eterna-cards-logo-2.jpg"
-                alt="Profile"
-                className="h-full w-full object-cover"
-              />
-            </div>
+          <div className="w-full flex items-center justify-center px-3">
+            {collapsed ? (
+              <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 tracking-tight">s.ai</span>
+            ) : (
+              <span className="text-[15px] font-semibold text-stone-900 dark:text-stone-100 tracking-tight">stocklane.ai</span>
+            )}
           </div>
           <nav className="flex flex-col items-start gap-2 mt-2 w-full">
             {mainNav.map((item) => {
@@ -215,8 +211,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       collapsed ? 'w-9 h-9 rounded-full' : 'w-10 h-10 rounded-xl'
                     } ${
                       active
-                        ? 'bg-[#ff6b35] text-white shadow-md'
-                        : 'text-gray-400 hover:text-gray-100 hover:bg-[#242424]'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'
                     }`}
                   >
                     <span className="sr-only">{item.label}</span>
@@ -224,7 +220,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   </div>
                   <span
                     className={`text-sm font-semibold tracking-tight whitespace-nowrap transition-all duration-150 ${
-                      active ? 'text-gray-100' : 'text-gray-500'
+                      active ? 'text-stone-900 dark:text-stone-100' : 'text-stone-500 dark:text-stone-400'
                     } ${collapsed ? 'hidden' : 'block'}`}
                   >
                     {item.label}
@@ -237,12 +233,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Bottom: User profile */}
         <div className="flex flex-col items-center w-full px-3">
-          <div className="w-full border-t border-[#2a2a2a] pt-4">
+          <div className="w-full border-t border-stone-200 dark:border-stone-800 pt-4">
             {user && (
               <div className="flex flex-col items-center gap-2">
                 {!collapsed && (
                   <div className="text-center">
-                    <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                    <p className="text-xs text-stone-500 dark:text-stone-400 truncate max-w-[160px]">
                       {user.email}
                     </p>
                   </div>
@@ -253,8 +249,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     collapsed ? 'w-9 h-9 rounded-full' : 'w-full px-3 py-2 rounded-xl gap-2'
                   } ${
                     isActivePath(pathname, '/account')
-                      ? 'bg-[#ff6b35] text-white'
-                      : 'text-gray-400 hover:text-gray-100 hover:bg-[#242424]'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'
                   }`}
                   title="Account settings"
                 >
@@ -267,8 +263,28 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   )}
                 </Link>
                 <button
+                  onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                  className={`flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors ${
+                    collapsed ? 'w-9 h-9 rounded-full' : 'w-full px-3 py-2 rounded-xl gap-2'
+                  }`}
+                  title={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {resolvedTheme === 'dark' ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                  {!collapsed && (
+                    <span className="text-sm font-medium">{resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                  )}
+                </button>
+                <button
                   onClick={handleSignOut}
-                  className={`flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-[#242424] transition-colors ${
+                  className={`flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors ${
                     collapsed ? 'w-9 h-9 rounded-full' : 'w-full px-3 py-2 rounded-xl gap-2'
                   }`}
                   title="Sign out"

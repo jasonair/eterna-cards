@@ -192,30 +192,30 @@ export default function PurchaseOrderForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="bg-[#3a2a2a] border border-red-500 rounded-lg p-3">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
       {description && (
-        <div className="bg-[#2a3a3a] border border-[#ff6b35] rounded-lg p-4">
-          <p className="text-sm text-gray-300">{description}</p>
+        <div className="bg-amber-50 border border-amber-600 rounded-lg p-4">
+          <p className="text-sm text-stone-600">{description}</p>
         </div>
       )}
 
       {/* Supplier Details */}
       <div>
-        <h4 className="text-sm font-semibold text-gray-100 mb-3">{title}</h4>
+        <h4 className="text-sm font-semibold text-stone-900 mb-3">{title}</h4>
         
         {/* Supplier Dropdown */}
         <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-300 mb-1">
-            Supplier <span className="text-[#ff6b35]">*</span>
+          <label className="block text-xs font-medium text-stone-600 mb-1">
+            Supplier <span className="text-amber-600">*</span>
           </label>
           <select
             value={selectedSupplierId}
             onChange={(e) => handleSupplierChange(e.target.value)}
-            className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35] mb-2"
+            className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 mb-2"
           >
             <option value="">-- Select existing supplier or create new --</option>
             {suppliers.map((supplier) => (
@@ -231,50 +231,50 @@ export default function PurchaseOrderForm({
               value={formData.supplier.name || ''}
               onChange={(e) => handleSupplierFieldChange('name', e.target.value)}
               placeholder="Or enter new supplier name"
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Email</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Email</label>
             <input
               type="email"
               value={formData.supplier.email || ''}
               onChange={(e) => handleSupplierFieldChange('email', e.target.value)}
               placeholder="supplier@example.com"
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Phone</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Phone</label>
             <input
               type="tel"
               value={formData.supplier.phone || ''}
               onChange={(e) => handleSupplierFieldChange('phone', e.target.value)}
               placeholder="+44 20 1234 5678"
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">VAT Number</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">VAT Number</label>
             <input
               type="text"
               value={formData.supplier.vatNumber || ''}
               onChange={(e) => handleSupplierFieldChange('vatNumber', e.target.value)}
               placeholder="GB123456789"
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-300 mb-1">Address</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Address</label>
             <textarea
               value={formData.supplier.address || ''}
               onChange={(e) => handleSupplierFieldChange('address', e.target.value)}
               placeholder="Full address"
               rows={2}
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
         </div>
@@ -282,35 +282,35 @@ export default function PurchaseOrderForm({
 
       {/* Purchase Order Details */}
       <div>
-        <h4 className="text-sm font-semibold text-gray-100 mb-3">Purchase Order Details</h4>
+        <h4 className="text-sm font-semibold text-stone-900 mb-3">Purchase Order Details</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Invoice Number</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Invoice Number</label>
             <input
               type="text"
               value={formData.purchaseOrder.invoiceNumber || ''}
               onChange={(e) => handlePOFieldChange('invoiceNumber', e.target.value)}
               placeholder="INV-001"
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Invoice Date</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Invoice Date</label>
             <input
               type="date"
               value={formData.purchaseOrder.invoiceDate || ''}
               onChange={(e) => handlePOFieldChange('invoiceDate', e.target.value)}
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Payment Terms</label>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Payment Terms</label>
             <input
               type="text"
               value={formData.purchaseOrder.paymentTerms || ''}
               onChange={(e) => handlePOFieldChange('paymentTerms', e.target.value)}
               placeholder="Net 30"
-              className="w-full px-3 py-2 border border-[#3a3a3a] bg-[#1a1a1a] rounded-md text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#ff6b35]"
+              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
         </div>
@@ -319,19 +319,19 @@ export default function PurchaseOrderForm({
       {/* Line Items */}
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h4 className="text-sm font-semibold text-gray-100">Line Items ({formData.poLines.length})</h4>
+          <h4 className="text-sm font-semibold text-stone-900">Line Items ({formData.poLines.length})</h4>
           <button
             type="button"
             onClick={handleAddLineItem}
-            className="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-[#ff6b35] rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+            className="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
           >
             + Add Line Item
           </button>
         </div>
         
-        <div className="bg-[#1a1a1a] rounded-lg p-3 max-h-96 overflow-y-auto border border-[#3a3a3a]">
+        <div className="bg-[#f9f9f8] rounded-lg p-3 max-h-96 overflow-y-auto border border-stone-200">
           <table className="w-full text-sm">
-            <thead className="text-xs text-gray-300 font-medium border-b border-[#3a3a3a] sticky top-0 bg-[#1a1a1a]">
+            <thead className="text-xs text-stone-600 font-medium border-b border-stone-200 sticky top-0 bg-[#f9f9f8]">
               <tr>
                 <th className="text-left pb-2">Description</th>
                 <th className="text-left pb-2">SKU</th>
@@ -341,16 +341,16 @@ export default function PurchaseOrderForm({
                 <th className="text-center pb-2">Actions</th>
               </tr>
             </thead>
-            <tbody className="text-gray-100">
+            <tbody className="text-stone-900">
               {formData.poLines.map((line, lineIdx) => (
-                <tr key={lineIdx} className="border-b border-[#3a3a3a] last:border-0">
+                <tr key={lineIdx} className="border-b border-stone-200 last:border-0">
                   <td className="py-2 pr-2">
                     <input
                       type="text"
                       value={line.description}
                       onChange={(e) => handleLineItemChange(lineIdx, 'description', e.target.value)}
                       placeholder="Item description"
-                      className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#2a2a2a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -359,7 +359,7 @@ export default function PurchaseOrderForm({
                       value={line.supplierSku || ''}
                       onChange={(e) => handleLineItemChange(lineIdx, 'supplierSku', e.target.value)}
                       placeholder="SKU"
-                      className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#2a2a2a] rounded text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -367,7 +367,7 @@ export default function PurchaseOrderForm({
                       type="number"
                       value={line.quantity}
                       onChange={(e) => handleLineItemChange(lineIdx, 'quantity', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#2a2a2a] rounded text-sm text-gray-100 text-right focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
                       min="0"
                       step="1"
                     />
@@ -377,18 +377,18 @@ export default function PurchaseOrderForm({
                       type="number"
                       value={line.unitCostExVAT}
                       onChange={(e) => handleLineItemChange(lineIdx, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border border-[#3a3a3a] bg-[#2a2a2a] rounded text-sm text-gray-100 text-right focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
                       min="0"
                       step="0.01"
                     />
                   </td>
-                  <td className="py-2 pr-2 text-right font-medium text-gray-100">{line.lineTotalExVAT.toFixed(2)}</td>
+                  <td className="py-2 pr-2 text-right font-medium text-stone-900">{line.lineTotalExVAT.toFixed(2)}</td>
                   <td className="py-2 text-center">
                     <button
                       type="button"
                       onClick={() => handleRemoveLineItem(lineIdx)}
                       disabled={formData.poLines.length === 1}
-                      className="text-[#ff6b35] hover:text-[#ff8c42] disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="text-amber-600 hover:text-amber-700 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Remove line"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -404,19 +404,19 @@ export default function PurchaseOrderForm({
         
         <div className="mt-3 flex justify-end">
           <div className="text-base">
-            <span className="text-gray-300 font-medium">Total: </span>
-            <span className="font-bold text-[#ff6b35]">GBP {formData.totals?.total?.toFixed(2) || '0.00'}</span>
+            <span className="text-stone-600 font-medium">Total: </span>
+            <span className="font-bold text-amber-600">GBP {formData.totals?.total?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-[#3a3a3a]">
+      <div className="flex justify-end gap-3 pt-4 border-t border-stone-200">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-100 bg-[#2a2a2a] border border-[#3a3a3a] rounded-md hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+            className="px-4 py-2 text-sm font-medium text-stone-900 bg-white border border-stone-200 rounded-md hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
             disabled={loading}
           >
             Cancel
@@ -425,7 +425,7 @@ export default function PurchaseOrderForm({
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] border border-transparent rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Saving...' : submitButtonText}
         </button>
