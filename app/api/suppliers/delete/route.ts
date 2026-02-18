@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteSupplier } from '@/lib/db';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { isValidUUID } from '@/lib/validation';
 
 // DELETE endpoint to remove a supplier and all associated data
 export async function DELETE(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     // Get the supplier ID from query params
     const { searchParams } = new URL(request.url);
     const supplierId = searchParams.get('id');
 
-    if (!supplierId) {
+    // SECURITY: Validate UUID format
+    if (!isValidUUID(supplierId)) {
       return NextResponse.json(
-        { error: 'Supplier ID is required' },
+        { error: 'Supplier ID must be a valid UUID' },
         { status: 400 }
       );
     }

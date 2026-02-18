@@ -91,10 +91,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Save to user_settings using service-role client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://iilkacrledtdiqiyvohv.supabase.co';
+    // SECURITY: Never hardcode Supabase URLs – read from environment variables only
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       return redirectWithError(request, 'Server configuration error');
     }
 

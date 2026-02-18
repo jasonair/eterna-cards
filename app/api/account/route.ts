@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
-import { supabase as anonSupabase } from '@/lib/supabaseClient';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -8,6 +8,10 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+
+    // SECURITY: Rate limit per IP + user
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
 
     // Fetch user settings (Shopify config etc.)
     const { data: settings } = await supabase
@@ -49,14 +53,27 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+
+    // SECURITY: Rate limit per IP + user
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
     const { action } = body;
+
+    // SECURITY: Validate action is a known value
+    if (typeof action !== 'string' || !['connect_shopify', 'disconnect_shopify'].includes(action)) {
+      return NextResponse.json(
+        { error: 'Invalid action. Must be connect_shopify or disconnect_shopify' },
+        { status: 400 }
+      );
+    }
 
     // Handle Shopify connect
     if (action === 'connect_shopify') {
       const { storeDomain, accessToken } = body;
 
-      if (!storeDomain || typeof storeDomain !== 'string') {
+      if (!storeDomain || typeof storeDomain !== 'string' || storeDomain.length > 253) {
         return NextResponse.json(
           { error: 'Shopify store domain is required' },
           { status: 400 }

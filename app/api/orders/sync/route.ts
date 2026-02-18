@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +18,10 @@ function getCustomerName(order: any): string | null {
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+
+    // SECURITY: Rate limit – sync is expensive, allow 10 requests/min
+    const blocked = applyRateLimit(request, user.id, { limit: 10, windowMs: 60_000 });
+    if (blocked) return blocked;
 
     // Get the user's Shopify credentials
     const { data: settings } = await supabase

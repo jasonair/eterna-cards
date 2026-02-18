@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
 import { getOrSetCache } from '@/lib/cache';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 const CACHE_KEY = 'purchasing_po_view_v1';
 const CACHE_TTL_MS = 1000 * 60 * 5; // 5 minutes
@@ -9,6 +10,9 @@ const CACHE_TTL_MS = 1000 * 60 * 5; // 5 minutes
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const forceRefresh = request.nextUrl.searchParams.get('refresh') === 'true';
     const payload = await getOrSetCache(
       `${CACHE_KEY}_${user.id}`, // User-specific cache key

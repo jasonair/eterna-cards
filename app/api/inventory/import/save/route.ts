@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 interface ImportRow {
   name: string;
@@ -16,12 +17,17 @@ interface ImportRow {
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    // SECURITY: Rate limit – import is a bulk write operation
+    const blocked = applyRateLimit(request, user.id, { limit: 10, windowMs: 60_000 });
+    if (blocked) return blocked;
+
     const body = await request.json();
 
     const rows: ImportRow[] = body.rows;
-    if (!Array.isArray(rows) || rows.length === 0) {
+    // SECURITY: Cap row count to prevent abuse
+    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 5000) {
       return NextResponse.json(
-        { error: 'No rows provided' },
+        { error: 'rows must be an array with 1–5000 items' },
         { status: 400 },
       );
     }

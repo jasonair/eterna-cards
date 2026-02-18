@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
 import { deleteProductAndInventory } from '@/lib/db';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { isValidUUID } from '@/lib/validation';
 
 // GET product + inventory + transit history for /inventory/[productId]
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
-    if (!id) {
+    if (!isValidUUID(id)) {
       return NextResponse.json(
-        { error: 'Product id is required' },
+        { error: 'Product id must be a valid UUID' },
         { status: 400 }
       );
     }
@@ -265,6 +270,9 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
@@ -376,6 +384,9 @@ export async function PUT(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
 
     const rawName = typeof body.name === 'string' ? body.name.trim() : '';
@@ -456,6 +467,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 

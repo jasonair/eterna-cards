@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { sanitizeString } from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*')
@@ -37,8 +41,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuth(request);
+    const blocked = applyRateLimit(request, user.id);
+    if (blocked) return blocked;
+
     const body = await request.json();
-    const title = (body?.title as string | undefined)?.trim();
+    const title = sanitizeString(body?.title, 500);
 
     if (!title) {
       return NextResponse.json(

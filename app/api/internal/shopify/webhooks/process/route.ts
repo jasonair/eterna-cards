@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 import { processShopifyWebhookJobs } from '@/lib/shopify/webhooks/processor';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Use timing-safe comparison to prevent timing attacks on secret
   const secret = process.env.WEBHOOK_PROCESSOR_SECRET;
   if (secret) {
     const provided = request.headers.get('x-cron-secret');
-    if (!provided || provided !== secret) {
+    if (
+      !provided ||
+      !crypto.timingSafeEqual(
+        Buffer.from(secret, 'utf8'),
+        Buffer.from(provided.padEnd(secret.length, '\0').slice(0, secret.length), 'utf8'),
+      )
+    ) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

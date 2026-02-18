@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-helpers';
+import { applyRateLimit } from '@/lib/rate-limit';
+import { sanitizePagination } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   const { user, supabase } = await requireAuth(request);
+  const blocked = applyRateLimit(request, user.id);
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get('channel');
-  const limit = parseInt(searchParams.get('limit') || '50', 10);
-  const offset = parseInt(searchParams.get('offset') || '0', 10);
+  // SECURITY: Sanitize pagination to prevent unbounded queries
+  const { limit, offset } = sanitizePagination(searchParams.get('limit'), searchParams.get('offset'), 250);
 
   let query = supabase
     .from('shopify_orders')
