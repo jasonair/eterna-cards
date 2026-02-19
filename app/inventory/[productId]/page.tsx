@@ -510,7 +510,8 @@ export default function ProductHistoryPage() {
   const isLongProductName = (product.name || '').length > 40;
 
   return (
-    <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+    <div className="h-full overflow-y-auto bg-[#f9f9f8] dark:bg-stone-900">
+    <div className="py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-[1400px] mx-auto space-y-5">
         {/* Header row - Sortly style */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -1029,6 +1030,7 @@ export default function ProductHistoryPage() {
           onClose={() => setScannerOpen(false)}
         />
       )}
+    </div>
     </div>
   );
 }
