@@ -856,7 +856,7 @@ export default function InventoryPage() {
               <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
                 <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Total Value</p>
                 {loading ? (
-                  <div className="h-6 sm:h-7 w-24 bg-stone-100 rounded animate-pulse mt-1" />
+                  <div className="h-6 sm:h-7 w-24 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
                 ) : (
                   <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">
                     £{items.reduce(
