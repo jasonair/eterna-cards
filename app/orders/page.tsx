@@ -163,7 +163,8 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-4 lg:px-6 md:pl-0">
+    <div className="h-full overflow-y-auto bg-[#f9f9f8] dark:bg-stone-900">
+    <div className="py-4 sm:py-6 px-3 sm:px-4 lg:px-6 md:pl-0">
       <div className="w-full space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
@@ -410,6 +411,7 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

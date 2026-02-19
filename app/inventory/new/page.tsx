@@ -128,7 +128,8 @@ export default function NewProductPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f9f9f8] py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+    <div className="h-full overflow-y-auto bg-[#f9f9f8]">
+    <div className="py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-[1400px] mx-auto space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -284,6 +285,7 @@ export default function NewProductPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

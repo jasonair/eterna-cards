@@ -174,6 +174,7 @@ export default function AccountPage() {
   ];
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 mb-8">Account Settings</h1>
 
@@ -349,6 +350,7 @@ export default function AccountPage() {
           </form>
         )}
       </section>
+    </div>
     </div>
   );
 }
