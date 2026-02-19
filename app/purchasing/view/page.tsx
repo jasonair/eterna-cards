@@ -89,6 +89,7 @@ export default function ViewDataPage() {
   const [expandedImages, setExpandedImages] = useState<Record<string, boolean>>({});
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<{poId: string, notes: string, supplierName: string, invoiceNumber: string} | null>(null);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -635,20 +636,20 @@ export default function ViewDataPage() {
   const isEmpty = !loading && (!data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0));
 
   return (
-    <div className="h-screen flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
       {/* Sticky top section */}
-      <div className="flex-none px-3 sm:px-4 lg:px-6 pt-4 sm:pt-6 pb-3 space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
+      <div className="flex-none px-3 sm:px-4 lg:px-6 pt-3 sm:pt-6 pb-3 space-y-3 sm:space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
         {/* Navigation Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex flex-row items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">
+            <h1 className="text-xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">
               Purchase Orders
             </h1>
-            <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400">
+            <p className="hidden sm:block text-sm sm:text-base text-stone-600 dark:text-stone-400 mt-1">
               View all imported invoices and suppliers
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleExportClick}
               disabled={!data || data.purchaseOrders.length === 0}
@@ -672,8 +673,9 @@ export default function ViewDataPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Stats Cards - collapsible on mobile when scrolled */}
+        <div className={`transition-all duration-300 ease-in-out sm:block ${headerScrolled ? 'max-h-0 overflow-hidden opacity-0 sm:max-h-none sm:overflow-visible sm:opacity-100 -mt-3 sm:mt-0' : 'max-h-56 overflow-visible opacity-100'}`}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 px-0.5 pb-0.5">
           <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
             <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Total Value</p>
             {loading ? (
@@ -726,10 +728,14 @@ export default function ViewDataPage() {
             )}
           </button>
         </div>
+        </div>
       </div>{/* end sticky top */}
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6" onScroll={(e) => {
+        const el = e.currentTarget;
+        setHeaderScrolled(el.scrollTop > 10);
+      }}>
 
         {/* Empty State */}
         {isEmpty && (

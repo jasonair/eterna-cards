@@ -100,6 +100,7 @@ export default function InventoryPage() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
 
   const handleScannedBarcode = (code: string) => {
     const raw = (code || '').trim();
@@ -745,33 +746,35 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
       {/* Sticky top section */}
-      <div className="flex-none px-3 sm:px-4 lg:px-6 md:pl-0 pt-4 sm:pt-6 pb-3 space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
+      <div className="flex-none px-3 sm:px-4 lg:px-6 md:pl-0 pt-3 sm:pt-6 pb-3 space-y-3 sm:space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+        <div className="flex flex-row items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">Inventory</h1>
+            <h1 className="text-xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">Inventory</h1>
           </div>
-          <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <div className="flex items-center gap-2">
             <a
               href="/inventory/import"
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
+              title="Import CSV"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Import CSV
+              <span className="hidden sm:inline">Import CSV</span>
             </a>
             <button
               onClick={exportInventoryCSV}
               disabled={visibleItems.length === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Export CSV"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Export CSV
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
             <button
               onClick={handleRefresh}
@@ -792,8 +795,9 @@ export default function InventoryPage() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Stats - collapsible on mobile when scrolled */}
+        <div className={`transition-all duration-300 ease-in-out sm:block ${headerScrolled ? 'max-h-0 overflow-hidden opacity-0 sm:max-h-none sm:overflow-visible sm:opacity-100 -mt-3 sm:mt-0' : 'max-h-56 overflow-visible opacity-100'}`}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 px-0.5 pb-0.5">
               <button
                 type="button"
                 onClick={() => setStockFilter('all')}
@@ -863,15 +867,88 @@ export default function InventoryPage() {
                 )}
               </div>
         </div>
+        </div>
 
-        {/* Breadcrumbs + toolbar row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+        {/* Toolbar - mobile: search row + controls row; desktop: single row */}
+        {/* Row 1: Search (full width on mobile) */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name / SKU"
+              className="w-full rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-amber-600"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute inset-y-0 right-2 my-auto inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-stone-500 hover:text-stone-900 hover:bg-stone-100"
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            ) : (
+              <svg className="absolute inset-y-0 right-2 my-auto h-3.5 w-3.5 text-stone-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            )}
+          </div>
+          {/* Scanner button - mobile only */}
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-amber-600 text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-600 sm:hidden flex-shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h3M4 17h3M17 7h3M17 17h3M9 7h6M9 17h6M7 9v6M17 9v6" />
+            </svg>
+          </button>
+          {/* View toggle + new item - desktop only inline */}
+          <div className="hidden sm:inline-flex rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-0.5">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
+              }`}
+              title="Grid view"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
+              }`}
+              title="Table view"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/inventory/new')}
+            className="hidden sm:block px-3 py-1.5 text-xs rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700 whitespace-nowrap"
+          >
+            New item
+          </button>
+        </div>
+        {/* Row 2: Breadcrumb + view toggle + new item (mobile) */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-stone-500 min-w-0 overflow-hidden">
             {foldersPanelCollapsed && (
               <button
                 type="button"
                 onClick={() => setFoldersPanelCollapsed(false)}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-stone-200 dark:border-stone-700 text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-700 transition-colors text-[11px] font-medium mr-1"
+                className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-stone-200 dark:border-stone-700 text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-700 transition-colors text-[11px] font-medium mr-1"
                 title="Show folders"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -880,12 +957,12 @@ export default function InventoryPage() {
                 Folders
               </button>
             )}
-            <span className="uppercase tracking-wide text-[10px] text-stone-400">Location</span>
-            <span className="text-stone-400">/</span>
+            <span className="uppercase tracking-wide text-[10px] text-stone-400 hidden sm:inline">Location</span>
+            <span className="text-stone-400 hidden sm:inline">/</span>
             <button
               type="button"
               onClick={() => setActiveFolderId('all')}
-              className={`px-2 py-0.5 rounded-md ${
+              className={`px-2 py-0.5 rounded-md text-xs ${
                 activeFolderId === 'all'
                   ? 'bg-amber-600 text-white'
                   : 'text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800'
@@ -894,54 +971,24 @@ export default function InventoryPage() {
               All items
             </button>
             {activeFolderPath.map((segment, index) => (
-              <span key={segment.id} className="flex items-center gap-2">
+              <span key={segment.id} className="flex items-center gap-1.5 min-w-0">
                 <span className="text-stone-400">/</span>
                 {index === activeFolderPath.length - 1 ? (
-                  <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white font-semibold">
+                  <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white font-semibold truncate max-w-[120px]">
                     {segment.name}
                   </span>
                 ) : (
-                  <span className="text-stone-600 dark:text-stone-400">{segment.name}</span>
+                  <span className="text-stone-600 dark:text-stone-400 truncate max-w-[80px]">{segment.name}</span>
                 )}
               </span>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <div className="relative">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name / SKU"
-                className="w-56 sm:w-80 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-amber-600"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute inset-y-0 right-2 my-auto inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] text-stone-500 hover:text-stone-900 hover:bg-stone-100"
-                  aria-label="Clear search"
-                >
-                  ×
-                </button>
-              ) : (
-                <svg className="absolute inset-y-0 right-2 my-auto h-3.5 w-3.5 text-stone-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setScannerOpen(true)}
-              className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-600 sm:hidden"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h3M4 17h3M17 7h3M17 17h3M9 7h6M9 17h6M7 9v6M17 9v6" />
-              </svg>
-            </button>
+          {/* View toggle + new item - mobile only */}
+          <div className="flex items-center gap-1.5 sm:hidden flex-shrink-0">
             <div className="inline-flex rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-0.5">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   viewMode === 'grid'
                     ? 'bg-amber-600 text-white'
                     : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
@@ -954,7 +1001,7 @@ export default function InventoryPage() {
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`px-2 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   viewMode === 'table'
                     ? 'bg-amber-600 text-white'
                     : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
@@ -969,7 +1016,7 @@ export default function InventoryPage() {
             <button
               type="button"
               onClick={() => router.push('/inventory/new')}
-              className="px-3 py-1.5 rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700"
+              className="px-2.5 py-1.5 text-xs rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700 whitespace-nowrap"
             >
               New item
             </button>
@@ -980,8 +1027,8 @@ export default function InventoryPage() {
       {/* Scrollable content */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full grid grid-cols-1 md:grid-cols-[auto_1fr] gap-0">
-          {/* Folders sidebar */}
-          <div className={`bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out ${foldersPanelCollapsed ? 'md:w-0 md:border-0 md:opacity-0 md:overflow-hidden hidden md:block' : 'md:w-64'}`}>
+          {/* Folders sidebar - hidden on mobile */}
+          <div className={`bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 overflow-hidden flex-col h-full transition-all duration-300 ease-in-out ${foldersPanelCollapsed ? 'md:w-0 md:border-0 md:opacity-0 md:overflow-hidden hidden' : 'hidden md:flex md:w-64'}`}>
             {/* Drawer header */}
             <div className="px-3 py-2 border-b border-stone-200 dark:border-stone-700 flex items-center justify-between bg-white dark:bg-stone-900">
               <div className="flex flex-col">
@@ -1255,7 +1302,10 @@ export default function InventoryPage() {
           </div>
 
           {/* Main scrollable content */}
-          <div className="flex-1 overflow-y-auto min-w-0 px-3 sm:px-4 lg:px-6 py-4">
+          <div className="flex-1 overflow-y-auto min-w-0 px-3 sm:px-4 lg:px-6 py-4" onScroll={(e) => {
+            const el = e.currentTarget;
+            setHeaderScrolled(el.scrollTop > 10);
+          }}>
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
