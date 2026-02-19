@@ -593,30 +593,22 @@ function ImportPageContent() {
   };
 
   return (
-      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-12 px-3 sm:px-6 lg:px-8">
-        <div className="max-w-[1600px] mx-auto">
-        {/* Navigation Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+    <div className="h-screen flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
+      {/* Sticky header */}
+      <div className="flex-none px-3 sm:px-4 lg:px-6 pt-4 sm:pt-6 pb-3 space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">
-              Purchase Order Import
-            </h1>
-            <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400">
-              Upload invoice files and group them before AI analysis
-            </p>
-            <p className="text-xs sm:text-sm text-amber-600 font-medium mt-2 hidden sm:block">
-              Tip: Drag files between groups to merge multiple pages into one purchase order
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">Purchase Order Import</h1>
           </div>
-          <div className="flex flex-col items-start sm:items-end gap-3">
-            <div className="inline-flex items-center rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-1 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
+            <div className="inline-flex items-center rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-0.5">
               <button
                 type="button"
                 onClick={() => setMode('import')}
-                className={`flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   mode === 'import'
-                    ? 'bg-amber-600 text-white shadow-md'
-                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
                 }`}
               >
                 Import
@@ -624,10 +616,10 @@ function ImportPageContent() {
               <button
                 type="button"
                 onClick={() => setMode('manual')}
-                className={`flex-1 sm:flex-none ml-1 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   mode === 'manual'
-                    ? 'bg-amber-600 text-white shadow-md'
-                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-700'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700'
                 }`}
               >
                 Manual
@@ -635,20 +627,22 @@ function ImportPageContent() {
             </div>
             <button
               onClick={navigateToView}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               View Orders
             </button>
           </div>
         </div>
+      </div>
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         {mode === 'import' && (
           <>
             {/* Upload Form */}
-            <div className="bg-white dark:bg-stone-800 rounded-lg shadow-md p-4 sm:p-6 mb-6 border border-stone-200 dark:border-stone-700">
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-stone-800 dark:text-stone-200 mb-3">
                 Upload Invoice Files (PNG, JPG, or PDF)
@@ -858,7 +852,6 @@ function ImportPageContent() {
               )}
             </button>
           </form>
-        </div>
 
         {/* Success Message Display */}
         {successMessage && (
@@ -1367,8 +1360,8 @@ export default function ImportPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 flex items-center justify-center text-stone-900 dark:text-stone-100">
-          Loading purchase order import...
+        <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
         </div>
       }
     >

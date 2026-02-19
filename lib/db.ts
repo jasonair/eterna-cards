@@ -1,10 +1,4 @@
 import { serverSupabase as supabase } from './supabase-server';
-import { testSupabaseConnection } from './test-supabase';
-import { checkTableStructure } from './check-schema';
-
-// Test connection on module load
-testSupabaseConnection();
-checkTableStructure();
 
 // Define the database schema types
 export interface Supplier {

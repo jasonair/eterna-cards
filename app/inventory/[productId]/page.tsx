@@ -450,10 +450,19 @@ export default function ProductHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-stone-600 dark:text-stone-400 text-sm">Loading product history...</p>
+      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-amber-600 mb-6"
+          >
+            <span>←</span>
+            <span>Back to inventory</span>
+          </button>
+          <div className="flex items-center justify-center py-24">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+          </div>
         </div>
       </div>
     );

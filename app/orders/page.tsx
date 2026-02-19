@@ -43,15 +43,11 @@ const ChannelIcon = ({ channel }: { channel: string }) => {
       );
     case 'ebay':
       return (
-        <svg className="w-5 h-5 text-[#e53238]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M5.457 6.75c-2.583 0-4.457 1.545-4.457 4.134 0 2.01 1.158 4.116 4.66 4.116.842 0 1.683-.123 2.463-.37v.87c0 1.33-.746 1.793-2.258 1.793-.905 0-1.79-.175-2.595-.497l-.493 1.73c.994.37 2.05.545 3.13.545 2.627 0 4.27-1.05 4.27-3.578v-8.49h-1.914l-.175.68c-.69-.545-1.587-.933-2.63-.933zm.287 1.778c1.357 0 2.195.82 2.195 2.35 0 1.545-.838 2.365-2.175 2.365-1.397 0-2.237-.765-2.237-2.33 0-1.545.82-2.385 2.217-2.385z"/>
-        </svg>
+        <img src="/EBay_logo.svg.png" alt="eBay" className="h-4 w-auto" />
       );
     case 'amazon':
       return (
-        <svg className="w-5 h-5 text-[#ff9900]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2v-2zm0-10h2v8h-2V7z"/>
-        </svg>
+        <img src="/Amazon_logo.svg.png" alt="Amazon" className="h-4 w-auto" />
       );
     default:
       return (
@@ -242,14 +238,6 @@ export default function OrdersPage() {
             <ChannelIcon channel="shopify" />
             <span>Shopify{shopifyConnected ? '' : ' (not connected)'}</span>
           </div>
-          <div className="flex items-center gap-1.5 opacity-40">
-            <ChannelIcon channel="ebay" />
-            <span>eBay (coming)</span>
-          </div>
-          <div className="flex items-center gap-1.5 opacity-40">
-            <ChannelIcon channel="amazon" />
-            <span>Amazon (coming)</span>
-          </div>
         </div>
 
         {/* Error */}
@@ -262,11 +250,8 @@ export default function OrdersPage() {
         {/* Orders Table */}
         <div className="bg-white dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden shadow-sm">
           {loading && orders.length === 0 ? (
-            <div className="p-8 text-center text-stone-500 dark:text-stone-400">
-              <svg className="w-8 h-8 mx-auto mb-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Loading orders...
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
             </div>
           ) : orders.length === 0 ? (
             <div className="p-8 text-center text-stone-500 dark:text-stone-400">

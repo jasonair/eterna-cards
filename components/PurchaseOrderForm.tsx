@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { authenticatedFetch } from '@/lib/api-client';
 
 interface Supplier {
   id: string;
@@ -79,7 +80,7 @@ export default function PurchaseOrderForm({
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch('/api/purchasing/po/view');
+      const response = await authenticatedFetch('/api/purchasing/po/view');
       if (response.ok) {
         const data = await response.json();
         setSuppliers(data.suppliers || []);
@@ -198,24 +199,24 @@ export default function PurchaseOrderForm({
       )}
 
       {description && (
-        <div className="bg-amber-50 border border-amber-600 rounded-lg p-4">
-          <p className="text-sm text-stone-600">{description}</p>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-600 rounded-lg p-4">
+          <p className="text-sm text-stone-600 dark:text-stone-400">{description}</p>
         </div>
       )}
 
       {/* Supplier Details */}
       <div>
-        <h4 className="text-sm font-semibold text-stone-900 mb-3">{title}</h4>
+        <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-3">{title}</h4>
         
         {/* Supplier Dropdown */}
         <div className="mb-4">
-          <label className="block text-xs font-medium text-stone-600 mb-1">
+          <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
             Supplier <span className="text-amber-600">*</span>
           </label>
           <select
             value={selectedSupplierId}
             onChange={(e) => handleSupplierChange(e.target.value)}
-            className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 mb-2"
+            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600 mb-2 appearance-none"
           >
             <option value="">-- Select existing supplier or create new --</option>
             {suppliers.map((supplier) => (
@@ -231,50 +232,50 @@ export default function PurchaseOrderForm({
               value={formData.supplier.name || ''}
               onChange={(e) => handleSupplierFieldChange('name', e.target.value)}
               placeholder="Or enter new supplier name"
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Email</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">Email</label>
             <input
               type="email"
               value={formData.supplier.email || ''}
               onChange={(e) => handleSupplierFieldChange('email', e.target.value)}
               placeholder="supplier@example.com"
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Phone</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">Phone</label>
             <input
               type="tel"
               value={formData.supplier.phone || ''}
               onChange={(e) => handleSupplierFieldChange('phone', e.target.value)}
               placeholder="+44 20 1234 5678"
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">VAT Number</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">VAT Number</label>
             <input
               type="text"
               value={formData.supplier.vatNumber || ''}
               onChange={(e) => handleSupplierFieldChange('vatNumber', e.target.value)}
               placeholder="GB123456789"
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-stone-600 mb-1">Address</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">Address</label>
             <textarea
               value={formData.supplier.address || ''}
               onChange={(e) => handleSupplierFieldChange('address', e.target.value)}
               placeholder="Full address"
               rows={2}
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
         </div>
@@ -282,35 +283,35 @@ export default function PurchaseOrderForm({
 
       {/* Purchase Order Details */}
       <div>
-        <h4 className="text-sm font-semibold text-stone-900 mb-3">Purchase Order Details</h4>
+        <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-3">Purchase Order Details</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Invoice Number</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">Invoice Number</label>
             <input
               type="text"
               value={formData.purchaseOrder.invoiceNumber || ''}
               onChange={(e) => handlePOFieldChange('invoiceNumber', e.target.value)}
               placeholder="INV-001"
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Invoice Date</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">Invoice Date</label>
             <input
               type="date"
               value={formData.purchaseOrder.invoiceDate || ''}
               onChange={(e) => handlePOFieldChange('invoiceDate', e.target.value)}
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600 dark:[color-scheme:dark]"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-stone-600 mb-1">Payment Terms</label>
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">Payment Terms</label>
             <input
               type="text"
               value={formData.purchaseOrder.paymentTerms || ''}
               onChange={(e) => handlePOFieldChange('paymentTerms', e.target.value)}
               placeholder="Net 30"
-              className="w-full px-3 py-2 border border-stone-200 bg-[#f9f9f8] rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
             />
           </div>
         </div>
@@ -319,7 +320,7 @@ export default function PurchaseOrderForm({
       {/* Line Items */}
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h4 className="text-sm font-semibold text-stone-900">Line Items ({formData.poLines.length})</h4>
+          <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Line Items ({formData.poLines.length})</h4>
           <button
             type="button"
             onClick={handleAddLineItem}
@@ -329,9 +330,9 @@ export default function PurchaseOrderForm({
           </button>
         </div>
         
-        <div className="bg-[#f9f9f8] rounded-lg p-3 max-h-96 overflow-y-auto border border-stone-200">
+        <div className="bg-[#f9f9f8] dark:bg-stone-800/50 rounded-lg p-3 max-h-96 overflow-y-auto border border-stone-200 dark:border-stone-700">
           <table className="w-full text-sm">
-            <thead className="text-xs text-stone-600 font-medium border-b border-stone-200 sticky top-0 bg-[#f9f9f8]">
+            <thead className="text-xs text-stone-600 dark:text-stone-400 font-medium border-b border-stone-200 dark:border-stone-700 sticky top-0 bg-[#f9f9f8] dark:bg-stone-800">
               <tr>
                 <th className="text-left pb-2">Description</th>
                 <th className="text-left pb-2">SKU</th>
@@ -341,16 +342,16 @@ export default function PurchaseOrderForm({
                 <th className="text-center pb-2">Actions</th>
               </tr>
             </thead>
-            <tbody className="text-stone-900">
+            <tbody className="text-stone-900 dark:text-stone-100">
               {formData.poLines.map((line, lineIdx) => (
-                <tr key={lineIdx} className="border-b border-stone-200 last:border-0">
+                <tr key={lineIdx} className="border-b border-stone-200 dark:border-stone-700 last:border-0">
                   <td className="py-2 pr-2">
                     <input
                       type="text"
                       value={line.description}
                       onChange={(e) => handleLineItemChange(lineIdx, 'description', e.target.value)}
                       placeholder="Item description"
-                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -359,7 +360,7 @@ export default function PurchaseOrderForm({
                       value={line.supplierSku || ''}
                       onChange={(e) => handleLineItemChange(lineIdx, 'supplierSku', e.target.value)}
                       placeholder="SKU"
-                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -367,7 +368,7 @@ export default function PurchaseOrderForm({
                       type="number"
                       value={line.quantity}
                       onChange={(e) => handleLineItemChange(lineIdx, 'quantity', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
                       min="0"
                       step="1"
                     />
@@ -377,12 +378,12 @@ export default function PurchaseOrderForm({
                       type="number"
                       value={line.unitCostExVAT}
                       onChange={(e) => handleLineItemChange(lineIdx, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border border-stone-200 bg-white rounded text-sm text-stone-900 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
                       min="0"
                       step="0.01"
                     />
                   </td>
-                  <td className="py-2 pr-2 text-right font-medium text-stone-900">{line.lineTotalExVAT.toFixed(2)}</td>
+                  <td className="py-2 pr-2 text-right font-medium text-stone-900 dark:text-stone-100">{line.lineTotalExVAT.toFixed(2)}</td>
                   <td className="py-2 text-center">
                     <button
                       type="button"
@@ -404,19 +405,19 @@ export default function PurchaseOrderForm({
         
         <div className="mt-3 flex justify-end">
           <div className="text-base">
-            <span className="text-stone-600 font-medium">Total: </span>
+            <span className="text-stone-600 dark:text-stone-400 font-medium">Total: </span>
             <span className="font-bold text-amber-600">GBP {formData.totals?.total?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-stone-200">
+      <div className="flex justify-end gap-3 pt-4 border-t border-stone-200 dark:border-stone-700">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-stone-900 bg-white border border-stone-200 rounded-md hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+            className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
             disabled={loading}
           >
             Cancel

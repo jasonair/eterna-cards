@@ -620,17 +620,6 @@ export default function ViewDataPage() {
     setSelectedNotes(null);
   };
 
-  if (loading && !data) {
-    return (
-      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-12 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-stone-600 dark:text-stone-400">Loading data...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error && !data) {
     return (
       <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-12 px-4">
@@ -643,7 +632,7 @@ export default function ViewDataPage() {
     );
   }
 
-  const isEmpty = !data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0);
+  const isEmpty = !loading && (!data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0));
 
   return (
     <div className="h-screen flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">

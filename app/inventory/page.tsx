@@ -1074,7 +1074,7 @@ export default function InventoryPage() {
                 }}
                 className={`flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium border-l-2 transition-colors transition-transform duration-150 ${
                   activeFolderId === 'all' || dragOverFolderId === 'all'
-                    ? 'border-amber-600 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 translate-x-0.5 shadow-md shadow-stone-200 ring-1 ring-amber-600/60'
+                    ? 'border-amber-600 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 translate-x-0.5'
                     : isDraggingFolder
                       ? 'border-stone-300 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100'
                       : 'border-transparent text-stone-800 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
@@ -1165,8 +1165,8 @@ export default function InventoryPage() {
                         }}
                         className={`flex items-center justify-between w-full py-2.5 border-l-2 transition-colors transition-transform duration-150 ${
                           activeFolderId === folder.id || dragOverFolderId === folder.id
-                            ? 'border-amber-600 bg-stone-100 text-stone-900 translate-x-0.5 shadow-md shadow-stone-200 ring-1 ring-amber-600/60'
-                            : 'border-transparent text-stone-600 hover:bg-stone-100'
+                            ? 'border-amber-600 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100 translate-x-0.5'
+                            : 'border-transparent text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
                         } ${isCustom ? 'cursor-move' : ''}`}
                         style={{ paddingLeft }}
                       >
@@ -1413,7 +1413,7 @@ export default function InventoryPage() {
                       <div className="p-3 flex flex-col flex-1">
                         <div className="flex items-start justify-between gap-2 flex-1 mb-2">
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-sm font-medium text-stone-900 dark:text-stone-100 leading-snug group-hover:text-amber-700 dark:group-hover:text-amber-500 transition-colors">
+                            <h3 className="text-sm font-medium text-stone-900 dark:text-stone-100 leading-snug">
                               {row.product.name}
                             </h3>
                           </div>

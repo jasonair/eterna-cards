@@ -39,6 +39,20 @@ export async function PUT(request: NextRequest) {
     }
 
     // Map camelCase fields to DB column names
+    // SECURITY: Verify the line belongs to a PO owned by the authenticated user
+    const { data: lineCheck, error: lineCheckError } = await supabase
+      .from('polines')
+      .select('id, purchaseorderid, purchaseorders!inner(user_id)')
+      .eq('id', lineId)
+      .single();
+
+    if (lineCheckError || !lineCheck || (lineCheck.purchaseorders as any)?.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Line item not found' },
+        { status: 404 }
+      );
+    }
+
     const mappedUpdates: Record<string, any> = {};
     if (updates.description !== undefined) mappedUpdates.description = updates.description;
     if (updates.supplierSku !== undefined) mappedUpdates.suppliersku = updates.supplierSku;
@@ -93,6 +107,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: 'Line item ID must be a valid UUID' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Verify the line belongs to a PO owned by the authenticated user
+    const { data: lineCheck, error: lineCheckError } = await supabase
+      .from('polines')
+      .select('id, purchaseorderid, purchaseorders!inner(user_id)')
+      .eq('id', lineId)
+      .single();
+
+    if (lineCheckError || !lineCheck || (lineCheck.purchaseorders as any)?.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Line item not found' },
+        { status: 404 }
       );
     }
 

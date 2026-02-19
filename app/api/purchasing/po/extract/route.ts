@@ -292,7 +292,6 @@ export async function POST(request: NextRequest) {
 
     // 3. Get current exchange rates
     const exchangeRates = await getExchangeRates();
-    console.log('Using exchange rates:', exchangeRates);
 
     // 4. Prepare all files for Gemini
     const fileParts = [];
@@ -304,6 +303,15 @@ export async function POST(request: NextRequest) {
       if (!isImage && !isPDF) {
         return NextResponse.json(
           { error: `Invalid file type: ${file.name}. Please upload image files (PNG, JPG) or PDFs.` },
+          { status: 400 }
+        );
+      }
+
+      // SECURITY: Cap individual file size to 20 MB
+      const MAX_FILE_BYTES = 20 * 1024 * 1024;
+      if (file.size > MAX_FILE_BYTES) {
+        return NextResponse.json(
+          { error: `File "${file.name}" exceeds the 20 MB size limit.` },
           { status: 400 }
         );
       }
@@ -380,10 +388,7 @@ export async function POST(request: NextRequest) {
       console.error('JSON parsing error:', error);
       console.error('Raw response:', text);
       return NextResponse.json(
-        { 
-          error: 'Failed to parse AI response as JSON',
-          rawResponse: text 
-        },
+        { error: 'Failed to parse AI response as JSON' },
         { status: 500 }
       );
     }

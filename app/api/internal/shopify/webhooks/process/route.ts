@@ -6,19 +6,24 @@ import { processShopifyWebhookJobs } from '@/lib/shopify/webhooks/processor';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
-  // SECURITY: Use timing-safe comparison to prevent timing attacks on secret
+  // SECURITY: Use timing-safe comparison to prevent timing attacks on secret.
+  // If WEBHOOK_PROCESSOR_SECRET is not configured, deny all requests – never
+  // allow the endpoint to be called without authentication.
   const secret = process.env.WEBHOOK_PROCESSOR_SECRET;
-  if (secret) {
-    const provided = request.headers.get('x-cron-secret');
-    if (
-      !provided ||
-      !crypto.timingSafeEqual(
-        Buffer.from(secret, 'utf8'),
-        Buffer.from(provided.padEnd(secret.length, '\0').slice(0, secret.length), 'utf8'),
-      )
-    ) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!secret) {
+    console.error('WEBHOOK_PROCESSOR_SECRET is not configured – rejecting request');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const provided = request.headers.get('x-cron-secret');
+  if (
+    !provided ||
+    !crypto.timingSafeEqual(
+      Buffer.from(secret, 'utf8'),
+      Buffer.from(provided.padEnd(secret.length, '\0').slice(0, secret.length), 'utf8'),
+    )
+  ) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const maxJobsRaw = request.nextUrl.searchParams.get('maxJobs');
