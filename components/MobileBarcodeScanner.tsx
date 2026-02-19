@@ -87,17 +87,17 @@ export default function MobileBarcodeScanner({ onScan, onClose }: MobileBarcodeS
             playsInline
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-8 border-2 border-[#ff6b35] rounded-xl pointer-events-none" />
+          <div className="absolute inset-8 border-2 border-amber-600 rounded-xl pointer-events-none" />
         </div>
 
         {initializing && !error && (
-          <p className="mt-4 text-xs text-gray-200">Initializing camera…</p>
+          <p className="mt-4 text-xs text-stone-800">Initializing camera…</p>
         )}
         {error && (
-          <p className="mt-4 text-xs text-red-300 text-center max-w-xs">{error}</p>
+          <p className="mt-4 text-xs text-red-600 text-center max-w-xs">{error}</p>
         )}
         {!initializing && !error && (
-          <p className="mt-3 text-[11px] text-gray-300 text-center max-w-xs">
+          <p className="mt-3 text-[11px] text-stone-600 text-center max-w-xs">
             Align the barcode within the frame. Scanning will happen automatically.
           </p>
         )}

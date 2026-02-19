@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
@@ -12,7 +12,16 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sl_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sl_sidebar_collapsed', String(collapsed));
+  }, [collapsed]);
   const { user, loading } = useAuth();
   const pathname = usePathname();
 
@@ -23,11 +32,8 @@ export default function AppShell({ children }: AppShellProps) {
   // Show loading spinner while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#111111]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b35] mx-auto"></div>
-          <p className="mt-4 text-gray-400">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f9f9f8] dark:bg-stone-900">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
       </div>
     );
   }
@@ -35,20 +41,20 @@ export default function AppShell({ children }: AppShellProps) {
   // If not authenticated and not on public route, show login prompt
   if (!user && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#111111] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#f9f9f8] dark:bg-stone-900 px-4">
         <div className="max-w-md w-full text-center">
-          <h1 className="text-3xl font-bold text-gray-100 mb-4">Welcome to Eterna Cards</h1>
-          <p className="text-gray-400 mb-8">Please sign in to access your inventory and purchase orders</p>
+          <h1 className="text-3xl font-bold text-stone-900 dark:text-stone-100 mb-4">Welcome to stocklane.ai</h1>
+          <p className="text-stone-500 dark:text-stone-400 mb-8">Please sign in to access your inventory and purchase orders</p>
           <div className="space-y-4">
             <a
               href="/login"
-              className="block w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+              className="block w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 dark:focus:ring-offset-stone-900"
             >
               Sign In
             </a>
             <a
               href="/signup"
-              className="block w-full py-2 px-4 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+              className="block w-full py-2 px-4 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 dark:focus:ring-offset-stone-900"
             >
               Create Account
             </a>
@@ -65,7 +71,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   // Authenticated user - show full app shell
   return (
-    <div className="min-h-screen flex bg-[#1a1a1a]">
+    <div className="min-h-screen flex bg-[#f9f9f8] dark:bg-stone-900">
       <MobileNav />
       <Sidebar
         collapsed={collapsed}

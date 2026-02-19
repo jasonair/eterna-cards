@@ -125,6 +125,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY: Cap file size to 20 MB
+    const MAX_FILE_BYTES = 20 * 1024 * 1024;
+    if (file.size > MAX_FILE_BYTES) {
+      return NextResponse.json(
+        { error: 'File exceeds the 20 MB size limit.' },
+        { status: 400 }
+      );
+    }
+
     // 3. Prepare file for Gemini
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -197,10 +206,7 @@ export async function POST(request: NextRequest) {
       console.error('JSON parsing error:', error);
       console.error('Raw response:', text);
       return NextResponse.json(
-        { 
-          error: 'Failed to parse Gemini response as JSON',
-          rawResponse: text 
-        },
+        { error: 'Failed to parse Gemini response as JSON' },
         { status: 500 }
       );
     }
@@ -208,10 +214,7 @@ export async function POST(request: NextRequest) {
     // 6. Validate extracted data
     if (!extractedData.supplier?.name) {
       return NextResponse.json(
-        { 
-          error: 'Failed to extract supplier name from invoice. Please ensure the image is clear and contains supplier information.',
-          extractedData 
-        },
+        { error: 'Failed to extract supplier name from invoice. Please ensure the image is clear and contains supplier information.' },
         { status: 400 }
       );
     }

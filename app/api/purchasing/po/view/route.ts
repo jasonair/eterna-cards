@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
           await Promise.all([
             supabase
               .from('suppliers')
-              .select('*')
+              .select('*, purchaseorders!inner(id)')
               .eq('user_id', user.id)
               .then(({ data }) => data || []),
             supabase

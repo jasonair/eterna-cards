@@ -276,9 +276,9 @@ export async function PUT(request: NextRequest) {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
-    if (!id) {
+    if (!isValidUUID(id)) {
       return NextResponse.json(
-        { error: 'Product id is required' },
+        { error: 'Product id must be a valid UUID' },
         { status: 400 }
       );
     }
@@ -330,8 +330,19 @@ export async function PUT(request: NextRequest) {
 
     if ('imageUrl' in body) {
       const raw = body.imageUrl;
-      const value = typeof raw === 'string' ? raw.trim() : '';
-      updates.imageurl = value.length > 0 ? value : null;
+      if (raw === null || raw === undefined || raw === '') {
+        updates.imageurl = null;
+      } else if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        // SECURITY: Only allow http/https URLs to prevent javascript: or data: URIs
+        if (trimmed.length > 0 && !/^https?:\/\//i.test(trimmed)) {
+          return NextResponse.json(
+            { error: 'imageUrl must be a valid http/https URL' },
+            { status: 400 }
+          );
+        }
+        updates.imageurl = trimmed.length > 0 ? trimmed.slice(0, 2048) : null;
+      }
     }
 
     if (Object.keys(updates).length === 0) {
@@ -473,9 +484,9 @@ export async function DELETE(request: NextRequest) {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
 
-    if (!id) {
+    if (!isValidUUID(id)) {
       return NextResponse.json(
-        { error: 'Product id is required' },
+        { error: 'Product id must be a valid UUID' },
         { status: 400 }
       );
     }

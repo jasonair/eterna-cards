@@ -206,7 +206,7 @@ export default function ViewDataPage() {
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return `£${amount.toFixed(2)} GBP`;
+    return `£${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GBP`;
   };
 
   const groupPOsByMonth = () => {
@@ -620,61 +620,41 @@ export default function ViewDataPage() {
     setSelectedNotes(null);
   };
 
-  if (loading && !data) {
-    return (
-      <div className="min-h-screen bg-[#1a1a1a] py-12 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b35] mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading data...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] py-12 px-4">
+      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-[#3a2a2a] border border-red-500 rounded-lg p-4">
-            <p className="text-red-400">Error: {error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">Error: {error}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  const isEmpty = !data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0);
+  const isEmpty = !loading && (!data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0));
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 px-3 sm:px-4 lg:px-6">
-      <div className="w-full space-y-6">
+    <div className="h-screen flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
+      {/* Sticky top section */}
+      <div className="flex-none px-3 sm:px-4 lg:px-6 pt-4 sm:pt-6 pb-3 space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
         {/* Navigation Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 mb-2">
               Purchase Orders
             </h1>
-            <p className="text-sm sm:text-base text-gray-300">
+            <p className="text-sm sm:text-base text-stone-600 dark:text-stone-400">
               View all imported invoices and suppliers
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <a
-              href="/purchasing/import"
-              className="inline-flex items-center px-3 sm:px-4 py-2 border border-[#3a3a3a] text-xs sm:text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors"
-            >
-              <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <span className="hidden sm:inline">Import Invoice</span>
-              <span className="sm:hidden">Import</span>
-            </a>
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleExportClick}
               disabled={!data || data.purchaseOrders.length === 0}
-              className="hidden sm:inline-flex items-center px-4 py-2 border border-[#3a3a3a] text-sm font-medium rounded-md text-gray-100 bg-[#2a2a2a] hover:bg-[#3a3a3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export CSV
@@ -682,86 +662,89 @@ export default function ViewDataPage() {
             <button
               onClick={fetchData}
               disabled={loading}
-              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh"
+              className="inline-flex items-center justify-center w-9 h-9 border border-transparent rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="w-4 h-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Toggle */}
-        <div className="mb-6">
-          <div className="inline-flex rounded-lg border border-[#3a3a3a] bg-[#2a2a2a] p-1">
-            <button
-              onClick={() => setStatusFilter('in_transit')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                statusFilter === 'in_transit'
-                  ? 'bg-[#ff6b35] text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
-              }`}
-            >
-              In Transit
-            </button>
-            <button
-              onClick={() => setStatusFilter('received')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                statusFilter === 'received'
-                  ? 'bg-[#ff6b35] text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-[#3a3a3a]'
-              }`}
-            >
-              Received
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
-            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Total Value</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Total Value</p>
             {loading ? (
-              <div className="h-6 sm:h-7 w-28 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+              <div className="h-6 sm:h-7 w-28 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
             ) : (
-              <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">£{(data?.poLines.reduce((sum, line) => sum + line.lineTotalExVAT, 0) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">£{(data?.poLines.reduce((sum, line) => sum + line.lineTotalExVAT, 0) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             )}
           </div>
 
-          <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
-            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">Orders</p>
+          <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Orders</p>
             {loading ? (
-              <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+              <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
             ) : (
-              <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.purchaseOrders.length || 0).toLocaleString()}</p>
+              <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">{(data?.purchaseOrders.length || 0).toLocaleString()}</p>
             )}
           </div>
 
-          <div className="flex flex-col justify-between bg-[#222222] rounded-xl border border-[#3a3a3a] p-3 sm:p-4 text-left shadow-sm">
-            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-gray-300 uppercase">In Transit</p>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('in_transit')}
+            className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
+              statusFilter === 'in_transit'
+                ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
+                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
+            }`}
+          >
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">In Transit</p>
             {loading ? (
-              <div className="h-6 sm:h-7 w-12 bg-[#3a3a3a] rounded animate-pulse mt-1" />
+              <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
             ) : (
-              <p className="text-lg sm:text-xl font-semibold text-gray-50 mt-1">{(data?.transit.filter(t => t.remainingQuantity > 0).reduce((sum, t) => sum + t.remainingQuantity, 0) || 0).toLocaleString()}</p>
+              <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">{(data?.transit.filter(t => t.remainingQuantity > 0).reduce((sum, t) => sum + t.remainingQuantity, 0) || 0).toLocaleString()}</p>
             )}
-          </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter('received')}
+            className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${
+              statusFilter === 'received'
+                ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
+                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
+            }`}
+          >
+            <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Received</p>
+            {loading ? (
+              <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
+            ) : (
+              <p className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100 mt-1">{(data?.purchaseOrders.filter(po => data.transit.filter(t => t.purchaseOrderId === po.id).length > 0 && data.transit.filter(t => t.purchaseOrderId === po.id).every(t => t.status === 'received')).length || 0).toLocaleString()}</p>
+            )}
+          </button>
         </div>
+      </div>{/* end sticky top */}
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
 
         {/* Empty State */}
         {isEmpty && (
-          <div className="bg-[#2a2a2a] rounded-lg shadow p-12 text-center border border-[#3a3a3a]">
-            <svg className="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="bg-white dark:bg-stone-800 rounded-lg shadow p-12 text-center border border-stone-200 dark:border-stone-700">
+            <svg className="mx-auto h-12 w-12 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 className="mt-2 text-lg font-medium text-gray-100">No data yet</h3>
-            <p className="mt-1 text-sm text-gray-400">
+            <h3 className="mt-2 text-lg font-medium text-stone-900 dark:text-stone-100">No data yet</h3>
+            <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
               Upload your first PDF invoice to see data here.
             </p>
             <div className="mt-6">
               <a
                 href="/purchasing/import"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
               >
                 Upload Invoice
               </a>
@@ -772,7 +755,7 @@ export default function ViewDataPage() {
         {/* Purchase Orders List - Grouped by Month */}
         {!isEmpty && (loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#ff6b35]"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
           </div>
         ) : (
           <div className="space-y-8">
@@ -783,8 +766,8 @@ export default function ViewDataPage() {
               <div key={month} className="space-y-4">
                 {/* Month Header */}
                 <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold text-gray-100">{month}</h2>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#3a3a3a] text-[#ff6b35]">
+                  <h2 className="text-2xl font-bold text-stone-900 dark:text-stone-100">{month}</h2>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-stone-100 dark:bg-stone-800 text-amber-600">
                     {filteredPOs.length} PO{filteredPOs.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -803,31 +786,31 @@ export default function ViewDataPage() {
                     return (
                       <div 
                         key={po.id} 
-                        className="bg-[#2a2a2a] rounded-lg shadow overflow-hidden transition-all border border-[#3a3a3a]"
+                        className="bg-white dark:bg-stone-800 rounded-lg shadow overflow-hidden transition-all border border-stone-200 dark:border-stone-700"
                       >
                   {/* PO Header */}
-                  <div className="bg-gradient-to-r from-[#ff6b35] to-[#ff8c42] px-3 sm:px-6 py-3 sm:py-4">
+                  <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-stone-200 dark:border-stone-700">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base sm:text-xl font-bold text-white truncate">
+                        <h3 className="text-base sm:text-xl font-bold text-stone-900 dark:text-stone-100 truncate">
                           {po.invoiceNumber}
                         </h3>
-                        <p className="text-white/80 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">
+                        <p className="text-stone-500 dark:text-stone-400 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">
                           {getSupplierName(po.supplierId)}
                         </p>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
                         <div className="text-left sm:text-right">
-                          <p className="text-lg sm:text-2xl font-bold text-white">
+                          <p className="text-lg sm:text-2xl font-bold text-stone-900 dark:text-stone-100">
                             {formatCurrency(totalAmount, po.currency)}
                           </p>
-                          <p className="text-white/80 text-[10px] sm:text-sm">Total (GBP)</p>
+                          <p className="text-stone-400 dark:text-stone-500 text-[10px] sm:text-sm">Total (GBP)</p>
                         </div>
                         <div className="flex gap-1 sm:gap-2">
                           {po.notes && po.notes.trim() && (
                             <button
                               onClick={() => handleShowNotes(po)}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                              className="border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-2 rounded-lg transition-colors"
                               title="View Notes"
                             >
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -837,7 +820,7 @@ export default function ViewDataPage() {
                           )}
                           <button
                             onClick={() => handleEdit(po)}
-                            className="bg-[#3a3a3a] hover:bg-[#4a4a4a] text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-2 rounded-lg transition-colors"
                             title="Edit Purchase Order"
                           >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -847,7 +830,7 @@ export default function ViewDataPage() {
                           <button
                             onClick={() => handleDelete(po.id)}
                             disabled={deleting === po.id}
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="border border-stone-200 dark:border-stone-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-stone-400 dark:text-stone-500 hover:text-red-500 hover:border-red-200 p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             title="Delete Purchase Order"
                           >
                             {deleting === po.id ? (
@@ -867,43 +850,43 @@ export default function ViewDataPage() {
                   </div>
 
                   {/* PO Details */}
-                  <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#1a1a1a] border-b border-[#3a3a3a]">
+                  <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#f9f9f8] dark:bg-stone-900 border-b border-stone-200 dark:border-stone-700">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Invoice Date</p>
-                        <p className="text-sm font-medium text-gray-100 mt-1">
+                        <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide">Invoice Date</p>
+                        <p className="text-sm font-medium text-stone-900 dark:text-stone-100 mt-1">
                           {formatDate(po.invoiceDate)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Currency</p>
-                        <p className="text-sm font-medium text-gray-100 mt-1">{po.currency}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide">Currency</p>
+                        <p className="text-sm font-medium text-stone-900 dark:text-stone-100 mt-1">{po.currency}</p>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Payment Terms</p>
-                        <p className="text-sm font-medium text-gray-100 mt-1 truncate">
+                        <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide">Payment Terms</p>
+                        <p className="text-sm font-medium text-stone-900 dark:text-stone-100 mt-1 truncate">
                           {po.paymentTerms || 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Line Items</p>
-                        <p className="text-sm font-medium text-gray-100 mt-1">{lines.length}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide">Line Items</p>
+                        <p className="text-sm font-medium text-stone-900 dark:text-stone-100 mt-1">{lines.length}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Invoice Images - Expandable */}
                   {po.imageUrls && po.imageUrls.length > 0 && (
-                    <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#1a1a1a] border-b border-[#3a3a3a]">
+                    <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#f9f9f8] dark:bg-stone-900 border-b border-stone-200 dark:border-stone-700">
                       <button
                         onClick={() => setExpandedImages(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
                         className="flex items-center justify-between w-full text-left group"
                       >
-                        <h4 className="text-xs sm:text-sm font-semibold text-gray-100 group-hover:text-[#ff6b35] transition-colors">
+                        <h4 className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-amber-600 transition-colors">
                           Original Invoice Images ({po.imageUrls.length})
                         </h4>
                         <svg 
-                          className={`w-5 h-5 text-gray-400 transition-transform ${expandedImages[po.id] ? 'rotate-180' : ''}`}
+                          className={`w-5 h-5 text-stone-500 transition-transform ${expandedImages[po.id] ? 'rotate-180' : ''}`}
                           fill="none" 
                           viewBox="0 0 24 24" 
                           stroke="currentColor"
@@ -920,7 +903,7 @@ export default function ViewDataPage() {
                               href={imageUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="group relative aspect-[3/4] bg-[#2a2a2a] rounded-lg overflow-hidden border-2 border-[#3a3a3a] hover:border-[#ff6b35] transition-colors"
+                              className="group relative aspect-[3/4] bg-white rounded-lg overflow-hidden border-2 border-stone-200 hover:border-amber-600 transition-colors"
                             >
                               <img
                                 src={imageUrl}
@@ -944,37 +927,37 @@ export default function ViewDataPage() {
 
                   {/* Line Items */}
                   <div className="px-3 sm:px-6 py-3 sm:py-4 overflow-hidden">
-                    <h4 className="text-xs sm:text-sm font-semibold text-gray-100 mb-2 sm:mb-3">Line Items</h4>
+                    <h4 className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 sm:mb-3">Line Items</h4>
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-[#3a3a3a] text-xs sm:text-sm">
+                      <table className="min-w-full divide-y divide-stone-200 dark:divide-stone-700 text-xs sm:text-sm">
                         <thead>
                           <tr>
-                            <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                               Description
                             </th>
-                            <th className="hidden sm:table-cell px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="hidden sm:table-cell px-3 py-2 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                               SKU
                             </th>
-                            <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                               Status
                             </th>
-                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider">
                             </th>
-                            <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider">
                               Qty
                             </th>
-                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider whitespace-nowrap">
                               Unit
                             </th>
-                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                            <th className="hidden sm:table-cell px-3 py-2 text-right text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider whitespace-nowrap">
                               RRP
                             </th>
-                            <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                            <th className="px-2 sm:px-3 py-2 text-right text-[10px] sm:text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider whitespace-nowrap">
                               Total
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#3a3a3a]">
+                        <tbody className="divide-y divide-stone-200 dark:divide-stone-700">
                           {lines.map((line) => {
                             const lineStatus = getLineReceiveStatus(line);
                             const isReceived = lineStatus.status === 'received';
@@ -984,16 +967,16 @@ export default function ViewDataPage() {
                             return (
                               <tr
                                 key={line.id}
-                                className={`hover:bg-[#1a1a1a] ${
+                                className={`hover:border-l-2 hover:border-l-amber-600/60 dark:hover:bg-stone-700/20 ${
                                   isReceived
-                                    ? 'bg-[#102515]'
+                                    ? 'bg-green-50 dark:bg-green-900/20'
                                     : isPartial
-                                    ? 'bg-[#281f10]'
+                                    ? 'bg-amber-50 dark:bg-amber-900/20'
                                     : ''
                                 }`}
                               >
                                 <td
-                                  className={`px-2 sm:px-3 py-2 sm:py-3 text-gray-100 ${
+                                  className={`px-2 sm:px-3 py-2 sm:py-3 text-stone-900 dark:text-stone-100 ${
                                     isLongDescription
                                       ? 'text-[11px] sm:text-xs leading-snug'
                                       : 'text-xs sm:text-sm'
@@ -1001,24 +984,24 @@ export default function ViewDataPage() {
                                 >
                                   <span className="break-words">{line.description}</span>
                                 </td>
-                                <td className="hidden sm:table-cell px-3 py-3 text-sm text-gray-400 font-mono">
+                                <td className="hidden sm:table-cell px-3 py-3 text-sm text-stone-500 dark:text-stone-400 font-mono">
                                   {line.supplierSku || '-'}
                                 </td>
                                 <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm">
                                   {lineStatus.status === 'received' && (
-                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#166534] text-green-100 border border-green-500/60 whitespace-nowrap">
+                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
                                       <span className="hidden sm:inline">Received</span>
-                                      <span className="sm:hidden">✓</span>
+                                      <span className="sm:hidden"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></span>
                                     </span>
                                   )}
                                   {lineStatus.status === 'partial' && (
-                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#78350f] text-amber-100 border border-amber-500/60 whitespace-nowrap">
+                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
                                       <span className="hidden sm:inline">Partial ({lineStatus.receivedQuantity}/{line.quantity})</span>
                                       <span className="sm:hidden">{lineStatus.receivedQuantity}/{line.quantity}</span>
                                     </span>
                                   )}
                                   {lineStatus.status === 'not_received' && (
-                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#111111] text-gray-300 border border-[#333333] whitespace-nowrap">
+                                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#f9f9f8] dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 whitespace-nowrap">
                                       <span className="hidden sm:inline">Not received</span>
                                       <span className="sm:hidden">—</span>
                                     </span>
@@ -1041,13 +1024,13 @@ export default function ViewDataPage() {
                                             [line.id]: e.target.value,
                                           }))
                                         }
-                                        className="w-16 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                                        className="w-16 rounded-md bg-[#f9f9f8] dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-600"
                                       />
                                       <button
                                         type="button"
                                         onClick={() => handleReceiveLine(line)}
                                         disabled={receivingLineId === line.id}
-                                        className="inline-flex items-center px-2.5 py-1 text-[11px] rounded-md bg-[#ff6b35] text-white hover:bg-[#ff8c42] disabled:opacity-50"
+                                        className="inline-flex items-center px-2.5 py-1 text-[11px] rounded-md border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 hover:text-stone-800 dark:hover:text-stone-200 disabled:opacity-50 font-medium"
                                       >
                                         {receivingLineId === line.id
                                           ? 'Saving...'
@@ -1058,16 +1041,16 @@ export default function ViewDataPage() {
                                     </div>
                                   )}
                                 </td>
-                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm text-gray-100 text-right">
+                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm text-stone-900 dark:text-stone-100 text-right">
                                   {line.quantity}
                                 </td>
-                                <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
+                                <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-stone-900 dark:text-stone-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.unitCostExVAT, po.currency)}
                                 </td>
-                                <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-gray-100 text-right font-mono whitespace-nowrap">
+                                <td className="hidden sm:table-cell px-3 py-3 text-xs sm:text-sm text-stone-900 dark:text-stone-100 text-right font-mono whitespace-nowrap">
                                   {line.rrp ? formatCurrency(line.rrp, po.currency) : '-'}
                                 </td>
-                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-100 text-right font-mono whitespace-nowrap">
+                                <td className="px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm font-medium text-stone-900 dark:text-stone-100 text-right font-mono whitespace-nowrap">
                                   {formatCurrency(line.lineTotalExVAT, po.currency)}
                                 </td>
                               </tr>
@@ -1080,26 +1063,26 @@ export default function ViewDataPage() {
 
                   {/* Totals Breakdown */}
                   {(po.subtotalExVAT != null || extras > 0 || vat > 0) && (
-                    <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#1a1a1a] border-t border-[#3a3a3a]">
+                    <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#f9f9f8] dark:bg-stone-900 border-t border-stone-200 dark:border-stone-700">
                       <div className="flex justify-end">
                         <div className="w-full sm:w-72 space-y-1.5 text-xs sm:text-sm">
-                          <div className="flex justify-between text-gray-400">
+                          <div className="flex justify-between text-stone-500 dark:text-stone-400">
                             <span>Subtotal (ex VAT)</span>
-                            <span className="font-mono text-gray-100">{formatCurrency(subtotal, po.currency)}</span>
+                            <span className="font-mono text-stone-900 dark:text-stone-100">{formatCurrency(subtotal, po.currency)}</span>
                           </div>
                           {extras > 0 && (
-                            <div className="flex justify-between text-gray-400">
+                            <div className="flex justify-between text-stone-500 dark:text-stone-400">
                               <span>Extras (Shipping, etc.)</span>
-                              <span className="font-mono text-gray-100">{formatCurrency(extras, po.currency)}</span>
+                              <span className="font-mono text-stone-900 dark:text-stone-100">{formatCurrency(extras, po.currency)}</span>
                             </div>
                           )}
                           {vat > 0 && (
-                            <div className="flex justify-between text-gray-400">
+                            <div className="flex justify-between text-stone-500 dark:text-stone-400">
                               <span>VAT</span>
-                              <span className="font-mono text-gray-100">{formatCurrency(vat, po.currency)}</span>
+                              <span className="font-mono text-stone-900 dark:text-stone-100">{formatCurrency(vat, po.currency)}</span>
                             </div>
                           )}
-                          <div className="flex justify-between pt-1.5 border-t border-[#3a3a3a] font-semibold text-gray-100">
+                          <div className="flex justify-between pt-1.5 border-t border-stone-200 dark:border-stone-700 font-semibold text-stone-900 dark:text-stone-100">
                             <span>Total</span>
                             <span className="font-mono">{formatCurrency(totalAmount, po.currency)}</span>
                           </div>
@@ -1109,14 +1092,14 @@ export default function ViewDataPage() {
                   )}
 
                   {/* Footer with metadata */}
-                  <div className="px-3 sm:px-6 py-2 sm:py-3 bg-[#1a1a1a] border-t border-[#3a3a3a] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <p className="text-[10px] sm:text-xs text-gray-400 truncate">
+                  <div className="px-3 sm:px-6 py-2 sm:py-3 bg-[#f9f9f8] dark:bg-stone-900 border-t border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 truncate">
                       Imported: {formatDate(po.createdAt)}
                     </p>
                     <button
                       onClick={() => handleReceiveFullPO(po)}
                       disabled={receivingPOId === po.id || receiveSummary.totalRemaining <= 0}
-                      className="inline-flex items-center justify-center px-3 py-1 text-[11px] sm:text-sm rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="inline-flex items-center justify-center px-3 py-1.5 text-[11px] sm:text-sm rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 hover:text-stone-800 dark:hover:text-stone-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                       title="Mark all remaining quantities on this PO as received"
                     >
                       {receivingPOId === po.id ? 'Receiving...' : 'Mark all received'}
@@ -1136,19 +1119,19 @@ export default function ViewDataPage() {
       {/* Edit PO Modal */}
       {editingPO && (
         <div className="fixed inset-0 bg-black/70 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-3 sm:top-6 mx-auto w-[95vw] max-w-6xl border border-[#3a3a3a] shadow-lg rounded-xl bg-[#2a2a2a] max-h-[92vh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="relative top-3 sm:top-6 mx-auto w-[95vw] max-w-6xl border border-stone-200 dark:border-stone-700 shadow-lg rounded-xl bg-white dark:bg-stone-800 max-h-[92vh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="px-4 sm:px-6 py-4 sm:py-5">
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-100">Edit Purchase Order</h3>
-                  <p className="text-xs sm:text-sm text-gray-400">Update header details and line items before saving.</p>
+                  <h3 className="text-lg sm:text-xl font-semibold text-stone-900 dark:text-stone-100">Edit Purchase Order</h3>
+                  <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">Update header details and line items before saving.</p>
                 </div>
                 <button
                   onClick={() => {
                     setEditingPO(null);
                     setEditingLines([]);
                   }}
-                  className="text-gray-400 hover:text-[#ff6b35]"
+                  className="text-stone-500 hover:text-amber-600"
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1159,42 +1142,42 @@ export default function ViewDataPage() {
               {/* PO Header and Images Side-by-Side */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
                 {/* Left: PO Details */}
-                <div className="bg-[#1a1a1a] p-4 sm:p-5 rounded-xl border border-[#3a3a3a]">
-                  <h4 className="text-base sm:text-lg font-semibold text-gray-100 mb-4">Purchase Order Details</h4>
+                <div className="bg-[#f9f9f8] dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700">
+                  <h4 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100 mb-4">Purchase Order Details</h4>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-1">
                         Invoice Number
                       </label>
                       <input
                         type="text"
                         value={editFormData.invoiceNumber}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
                         placeholder="Enter invoice number"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-1">
                         Invoice Date
                       </label>
                       <input
                         type="date"
                         value={editFormData.invoiceDate}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-1">
                         Currency
                       </label>
                       <select
                         value={editFormData.currency}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, currency: e.target.value }))}
-                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
                       >
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -1205,14 +1188,14 @@ export default function ViewDataPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-1">
                         Payment Terms
                       </label>
                       <input
                         type="text"
                         value={editFormData.paymentTerms}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
-                        className="w-full px-3 py-2 border border-[#3a3a3a] rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff6b35] text-gray-100 bg-[#1a1a1a]"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
                         placeholder="e.g., Net 30, Due on Receipt"
                       />
                     </div>
@@ -1221,8 +1204,8 @@ export default function ViewDataPage() {
 
                 {/* Right: Invoice Images */}
                 {editingPO.imageUrls && editingPO.imageUrls.length > 0 ? (
-                  <div className="bg-[#1a1a1a] p-4 sm:p-5 rounded-xl border border-[#3a3a3a]">
-                    <h4 className="text-base sm:text-lg font-semibold text-gray-100 mb-4">Original Invoice Images</h4>
+                  <div className="bg-[#f9f9f8] dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700">
+                    <h4 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100 mb-4">Original Invoice Images</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {editingPO.imageUrls.map((imageUrl, idx) => (
                         <a
@@ -1230,7 +1213,7 @@ export default function ViewDataPage() {
                           href={imageUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group relative aspect-[3/4] bg-[#2a2a2a] rounded-lg overflow-hidden border-2 border-[#3a3a3a] hover:border-[#ff6b35] transition-colors"
+                          className="group relative aspect-[3/4] bg-white rounded-lg overflow-hidden border-2 border-stone-200 hover:border-amber-600 transition-colors"
                         >
                           <img
                             src={imageUrl}
@@ -1250,22 +1233,22 @@ export default function ViewDataPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#1a1a1a] p-4 sm:p-5 rounded-xl border border-[#3a3a3a] flex items-center justify-center">
-                    <p className="text-sm text-gray-400">No invoice images available</p>
+                  <div className="bg-[#f9f9f8] dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center">
+                    <p className="text-sm text-stone-500 dark:text-stone-400">No invoice images available</p>
                   </div>
                 )}
               </div>
 
               {/* Line Items Section */}
-              <div className="bg-[#1a1a1a] border border-[#3a3a3a] rounded-xl p-4 sm:p-5">
+              <div className="bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                   <div>
-                    <h4 className="text-base sm:text-lg font-semibold text-gray-100">Line Items</h4>
-                    <p className="text-xs sm:text-sm text-gray-400">Edit quantities, prices, or remove lines.</p>
+                    <h4 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100">Line Items</h4>
+                    <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">Edit quantities, prices, or remove lines.</p>
                   </div>
                   <button
                     onClick={handleAddLineItem}
-                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ff6b35] hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
                   >
                     <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1276,41 +1259,41 @@ export default function ViewDataPage() {
 
                 <div className="sm:hidden space-y-3">
                   {editingLines.map((line) => (
-                    <div key={line.id} className="border border-[#3a3a3a] rounded-lg p-3 space-y-3 bg-[#1f1f1f]">
+                    <div key={line.id} className="border border-stone-200 dark:border-stone-700 rounded-lg p-3 space-y-3 bg-stone-50 dark:bg-stone-800">
                       <div>
-                        <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                        <label className="block text-[10px] font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide mb-1">
                           Description
                         </label>
                         <input
                           type="text"
                           value={line.description}
                           onChange={(e) => handleUpdateLineItem(line.id, 'description', e.target.value)}
-                          className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                          className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                           placeholder="Item description"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                          <label className="block text-[10px] font-medium text-stone-500 uppercase tracking-wide mb-1">
                             SKU
                           </label>
                           <input
                             type="text"
                             value={line.supplierSku || ''}
                             onChange={(e) => handleUpdateLineItem(line.id, 'supplierSku', e.target.value || null)}
-                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            className="w-full px-2 py-2 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                             placeholder="SKU"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                          <label className="block text-[10px] font-medium text-stone-500 uppercase tracking-wide mb-1">
                             Quantity
                           </label>
                           <input
                             type="number"
                             value={line.quantity}
                             onChange={(e) => handleUpdateLineItem(line.id, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            className="w-full px-2 py-2 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                             min="0"
                             step="1"
                           />
@@ -1318,27 +1301,27 @@ export default function ViewDataPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                          <label className="block text-[10px] font-medium text-stone-500 uppercase tracking-wide mb-1">
                             Unit Price
                           </label>
                           <input
                             type="number"
                             value={line.unitCostExVAT}
                             onChange={(e) => handleUpdateLineItem(line.id, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            className="w-full px-2 py-2 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                             min="0"
                             step="0.01"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                          <label className="block text-[10px] font-medium text-stone-500 uppercase tracking-wide mb-1">
                             RRP
                           </label>
                           <input
                             type="number"
                             value={line.rrp || ''}
                             onChange={(e) => handleUpdateLineItem(line.id, 'rrp', parseFloat(e.target.value) || null)}
-                            className="w-full px-2 py-2 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                            className="w-full px-2 py-2 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                             min="0"
                             step="0.01"
                             placeholder="Optional"
@@ -1346,16 +1329,16 @@ export default function ViewDataPage() {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                        <label className="block text-[10px] font-medium text-stone-500 uppercase tracking-wide mb-1">
                           Total
                         </label>
-                        <div className="px-2 py-2 border border-[#3a3a3a] rounded text-sm text-gray-100 bg-[#2a2a2a]">
+                        <div className="px-2 py-2 border border-stone-200 rounded text-sm text-stone-900 bg-white">
                           £{(line.lineTotalExVAT || 0).toFixed(2)} GBP
                         </div>
                       </div>
                       <button
                         onClick={() => handleRemoveLineItem(line.id)}
-                        className="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-[#ff6b35] border border-[#3a3a3a] rounded-md hover:bg-[#2a2a2a]"
+                        className="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-amber-600 border border-stone-200 dark:border-stone-700 rounded-md hover:bg-stone-50 dark:hover:bg-stone-700"
                       >
                         Remove Line Item
                       </button>
@@ -1364,41 +1347,41 @@ export default function ViewDataPage() {
                 </div>
 
                 <div className="hidden sm:block overflow-x-auto">
-                  <table className="min-w-full divide-y divide-[#3a3a3a]">
-                    <thead className="bg-[#2a2a2a]">
+                  <table className="min-w-full divide-y divide-stone-200">
+                    <thead className="bg-white">
                       <tr>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           Description
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           SKU
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           Quantity
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           Unit Price
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           RRP
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           Total
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-[#1a1a1a] divide-y divide-[#3a3a3a]">
+                    <tbody className="bg-[#f9f9f8] divide-y divide-stone-200">
                       {editingLines.map((line) => (
-                        <tr key={line.id} className="hover:bg-[#2a2a2a]">
+                        <tr key={line.id} className="hover:bg-stone-50 dark:hover:bg-stone-700/20">
                           <td className="px-3 py-3">
                             <input
                               type="text"
                               value={line.description}
                               onChange={(e) => handleUpdateLineItem(line.id, 'description', e.target.value)}
-                              className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                              className="w-full px-2 py-1 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                               placeholder="Item description"
                             />
                           </td>
@@ -1407,7 +1390,7 @@ export default function ViewDataPage() {
                               type="text"
                               value={line.supplierSku || ''}
                               onChange={(e) => handleUpdateLineItem(line.id, 'supplierSku', e.target.value || null)}
-                              className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                              className="w-full px-2 py-1 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                               placeholder="SKU"
                             />
                           </td>
@@ -1416,7 +1399,7 @@ export default function ViewDataPage() {
                               type="number"
                               value={line.quantity}
                               onChange={(e) => handleUpdateLineItem(line.id, 'quantity', parseFloat(e.target.value) || 0)}
-                              className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                              className="w-full px-2 py-1 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                               min="0"
                               step="1"
                             />
@@ -1426,7 +1409,7 @@ export default function ViewDataPage() {
                               type="number"
                               value={line.unitCostExVAT}
                               onChange={(e) => handleUpdateLineItem(line.id, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                              className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                              className="w-full px-2 py-1 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                               min="0"
                               step="0.01"
                             />
@@ -1436,19 +1419,19 @@ export default function ViewDataPage() {
                               type="number"
                               value={line.rrp || ''}
                               onChange={(e) => handleUpdateLineItem(line.id, 'rrp', parseFloat(e.target.value) || null)}
-                              className="w-full px-2 py-1 border border-[#3a3a3a] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b35] text-gray-100 bg-[#2a2a2a]"
+                              className="w-full px-2 py-1 border border-stone-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 bg-white"
                               min="0"
                               step="0.01"
                               placeholder="Optional"
                             />
                           </td>
-                          <td className="px-3 py-3 text-sm font-medium text-gray-100">
+                          <td className="px-3 py-3 text-sm font-medium text-stone-900">
                             £{(line.lineTotalExVAT || 0).toFixed(2)} GBP
                           </td>
                           <td className="px-3 py-3">
                             <button
                               onClick={() => handleRemoveLineItem(line.id)}
-                              className="text-[#ff6b35] hover:text-[#ff8c42] text-sm font-medium"
+                              className="text-amber-600 hover:text-amber-700 text-sm font-medium"
                               title="Remove line item"
                             >
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1463,7 +1446,7 @@ export default function ViewDataPage() {
                 </div>
 
                 {editingLines.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
+                  <div className="text-center py-8 text-stone-500">
                     No line items. Click "Add Line Item" to get started.
                   </div>
                 )}
@@ -1475,7 +1458,7 @@ export default function ViewDataPage() {
                     setEditingPO(null);
                     setEditingLines([]);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-100 bg-[#3a3a3a] border border-[#4a4a4a] rounded-md hover:bg-[#4a4a4a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+                  className="px-4 py-2 text-sm font-medium text-stone-900 bg-stone-100 border border-stone-300 rounded-md hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
                   disabled={saving}
                 >
                   Cancel
@@ -1483,7 +1466,7 @@ export default function ViewDataPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] border border-transparent rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <span className="flex items-center">
@@ -1506,13 +1489,13 @@ export default function ViewDataPage() {
       {/* Export Month Selection Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border border-[#3a3a3a] w-96 shadow-lg rounded-md bg-[#2a2a2a]">
+          <div className="relative top-20 mx-auto p-5 border border-stone-200 w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-100">Select Months to Export</h3>
+                <h3 className="text-lg font-medium text-stone-900">Select Months to Export</h3>
                 <button
                   onClick={() => setShowExportModal(false)}
-                  className="text-gray-400 hover:text-[#ff6b35]"
+                  className="text-stone-500 hover:text-amber-600"
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1523,13 +1506,13 @@ export default function ViewDataPage() {
               <div className="mb-4 flex gap-2">
                 <button
                   onClick={handleSelectAllMonths}
-                  className="px-3 py-1 text-xs font-medium text-white bg-[#ff6b35] rounded hover:bg-[#ff8c42]"
+                  className="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700"
                 >
                   Select All
                 </button>
                 <button
                   onClick={handleDeselectAllMonths}
-                  className="px-3 py-1 text-xs font-medium text-gray-100 bg-[#3a3a3a] rounded hover:bg-[#4a4a4a]"
+                  className="px-3 py-1 text-xs font-medium text-stone-900 bg-stone-100 rounded hover:bg-stone-200"
                 >
                   Deselect All
                 </button>
@@ -1539,17 +1522,17 @@ export default function ViewDataPage() {
                 {Object.entries(groupPOsByMonth()).map(([month, pos]) => (
                   <label
                     key={month}
-                    className="flex items-center p-3 border border-[#3a3a3a] rounded-lg hover:bg-[#3a3a3a] cursor-pointer"
+                    className="flex items-center p-3 border border-stone-200 rounded-lg hover:bg-stone-100 cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={selectedMonths.includes(month)}
                       onChange={() => handleMonthToggle(month)}
-                      className="h-4 w-4 text-[#ff6b35] focus:ring-[#ff6b35] border-[#3a3a3a] rounded"
+                      className="h-4 w-4 text-amber-600 focus:ring-amber-600 border-stone-200 rounded"
                     />
                     <div className="ml-3 flex-1">
-                      <span className="text-sm font-medium text-gray-100">{month}</span>
-                      <span className="ml-2 text-xs text-gray-400">
+                      <span className="text-sm font-medium text-stone-900">{month}</span>
+                      <span className="ml-2 text-xs text-stone-500">
                         ({pos.length} PO{pos.length !== 1 ? 's' : ''})
                       </span>
                     </div>
@@ -1560,7 +1543,7 @@ export default function ViewDataPage() {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowExportModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-100 bg-[#3a3a3a] border border-[#4a4a4a] rounded-md hover:bg-[#4a4a4a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+                  className="px-4 py-2 text-sm font-medium text-stone-900 bg-stone-100 border border-stone-300 rounded-md hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
                 >
                   Cancel
                 </button>
@@ -1572,7 +1555,7 @@ export default function ViewDataPage() {
                     }
                   }}
                   disabled={selectedMonths.length === 0}
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] border border-transparent rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Export {selectedMonths.length > 0 && `(${selectedMonths.length} month${selectedMonths.length !== 1 ? 's' : ''})`}
                 </button>
@@ -1585,17 +1568,17 @@ export default function ViewDataPage() {
       {/* Notes Modal */}
       {showNotesModal && selectedNotes && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#2a2a2a] rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-[#3a3a3a]">
-            <div className="flex items-center justify-between p-6 border-b border-[#3a3a3a]">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-stone-200">
+            <div className="flex items-center justify-between p-6 border-b border-stone-200">
               <div>
-                <h3 className="text-lg font-semibold text-gray-100">Purchase Order Notes</h3>
-                <p className="text-sm text-gray-400 mt-1">
+                <h3 className="text-lg font-semibold text-stone-900">Purchase Order Notes</h3>
+                <p className="text-sm text-stone-500 mt-1">
                   {selectedNotes.supplierName} - {selectedNotes.invoiceNumber}
                 </p>
               </div>
               <button
                 onClick={handleCloseNotesModal}
-                className="text-gray-400 hover:text-gray-200 transition-colors"
+                className="text-stone-500 hover:text-stone-800 transition-colors"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1604,18 +1587,18 @@ export default function ViewDataPage() {
             </div>
             
             <div className="p-6">
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#3a3a3a]">
-                <h4 className="text-sm font-semibold text-gray-300 mb-3">Notes & Instructions</h4>
-                <div className="text-sm text-gray-100 whitespace-pre-wrap leading-relaxed">
+              <div className="bg-[#f9f9f8] rounded-lg p-4 border border-stone-200">
+                <h4 className="text-sm font-semibold text-stone-600 mb-3">Notes & Instructions</h4>
+                <div className="text-sm text-stone-900 whitespace-pre-wrap leading-relaxed">
                   {selectedNotes.notes}
                 </div>
               </div>
             </div>
             
-            <div className="flex justify-end p-6 border-t border-[#3a3a3a]">
+            <div className="flex justify-end p-6 border-t border-stone-200">
               <button
                 onClick={handleCloseNotesModal}
-                className="px-4 py-2 text-sm font-medium text-white bg-[#ff6b35] rounded-md hover:bg-[#ff8c42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ff6b35]"
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
               >
                 Close
               </button>

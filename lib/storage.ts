@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { serverSupabase as supabase } from './supabase-server';
 
 const BUCKET_NAME = 'po-invoices';
 

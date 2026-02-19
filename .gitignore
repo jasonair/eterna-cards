@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# debug/test utility files (not for production)
+lib/test-supabase.ts
+lib/check-schema.ts
+test-models.js
+server.log

@@ -32,26 +32,29 @@ export async function GET(request: NextRequest) {
       return redirectWithError(request, 'Shopify credentials not configured');
     }
 
-    if (hmac) {
-      // Build message from raw query params (no URL encoding), sorted by key
-      const entries: [string, string][] = [];
-      searchParams.forEach((value, key) => {
-        if (key !== 'hmac') {
-          entries.push([key, value]);
-        }
-      });
-      entries.sort(([a], [b]) => a.localeCompare(b));
-      const message = entries.map(([k, v]) => `${k}=${v}`).join('&');
+    // SECURITY: HMAC must always be present and valid – never skip verification
+    if (!hmac) {
+      return redirectWithError(request, 'Missing HMAC parameter');
+    }
 
-      const generatedHmac = crypto
-        .createHmac('sha256', clientSecret)
-        .update(message)
-        .digest('hex');
-
-      if (!crypto.timingSafeEqual(Buffer.from(generatedHmac, 'hex'), Buffer.from(hmac, 'hex'))) {
-        console.error('HMAC mismatch:', { expected: generatedHmac, received: hmac, message });
-        return redirectWithError(request, 'HMAC verification failed');
+    // Build message from raw query params (no URL encoding), sorted by key
+    const entries: [string, string][] = [];
+    searchParams.forEach((value, key) => {
+      if (key !== 'hmac') {
+        entries.push([key, value]);
       }
+    });
+    entries.sort(([a], [b]) => a.localeCompare(b));
+    const message = entries.map(([k, v]) => `${k}=${v}`).join('&');
+
+    const generatedHmac = crypto
+      .createHmac('sha256', clientSecret)
+      .update(message)
+      .digest('hex');
+
+    if (!crypto.timingSafeEqual(Buffer.from(generatedHmac, 'hex'), Buffer.from(hmac, 'hex'))) {
+      console.error('HMAC mismatch for shop:', shop);
+      return redirectWithError(request, 'HMAC verification failed');
     }
 
     // Exchange the code for an access token

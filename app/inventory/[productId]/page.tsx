@@ -450,10 +450,19 @@ export default function ProductHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#ff6b35] mx-auto mb-4"></div>
-          <p className="text-gray-300 text-sm">Loading product history...</p>
+      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-amber-600 mb-6"
+          >
+            <span>←</span>
+            <span>Back to inventory</span>
+          </button>
+          <div className="flex items-center justify-center py-24">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+          </div>
         </div>
       </div>
     );
@@ -461,16 +470,16 @@ export default function ProductHistoryPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] py-8 px-4">
+      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-8 px-4">
         <div className="max-w-3xl mx-auto">
           <button
             type="button"
             onClick={() => router.back()}
-            className="mb-4 text-sm text-[#ff6b35] hover:text-[#ff8c42]"
+            className="mb-4 text-sm text-amber-600 hover:text-amber-700"
           >
             ← Back
           </button>
-          <div className="bg-[#3a2a2a] border border-red-500 rounded-lg p-4 text-sm text-red-200">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
             {error || 'Product not found'}
           </div>
         </div>
@@ -501,7 +510,7 @@ export default function ProductHistoryPage() {
   const isLongProductName = (product.name || '').length > 40;
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-[1400px] mx-auto space-y-5">
         {/* Header row - Sortly style */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -509,19 +518,19 @@ export default function ProductHistoryPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#ff6b35] mb-2"
+              className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-amber-600 mb-2"
             >
               <span>←</span>
               <span>Back to inventory</span>
             </button>
             <h1
-              className={`font-bold text-gray-100 uppercase tracking-tight break-words ${
+              className={`font-bold text-stone-900 dark:text-stone-100 uppercase tracking-tight break-words ${
                 isLongProductName ? 'text-lg sm:text-xl md:text-2xl leading-snug' : 'text-lg sm:text-2xl md:text-3xl'
               }`}
             >
               {product.name}
             </h1>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">
               Product ID: <span className="font-mono">{product.id.slice(0, 8)}...</span> · Updated {formatDate(product.updatedAt)}
             </p>
           </div>
@@ -545,7 +554,7 @@ export default function ProductHistoryPage() {
                     }
                   }}
                   disabled={saving}
-                  className="px-4 py-2 rounded-md border border-[#3a3a3a] text-sm text-gray-300 hover:bg-[#3a3a3a] disabled:opacity-50"
+                  className="px-4 py-2 rounded-md border border-stone-200 dark:border-stone-700 text-sm text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -553,7 +562,7 @@ export default function ProductHistoryPage() {
                   type="button"
                   onClick={handleSaveProduct}
                   disabled={saving}
-                  className="px-4 py-2 rounded-md bg-[#ff6b35] text-white text-sm font-medium hover:bg-[#ff8c42] disabled:opacity-50"
+                  className="px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
                 >
                   {saving ? 'Saving…' : 'Save'}
                 </button>
@@ -562,7 +571,7 @@ export default function ProductHistoryPage() {
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#ff6b35] text-white text-sm font-medium hover:bg-[#ff8c42]"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -576,13 +585,13 @@ export default function ProductHistoryPage() {
         {/* Two-column body - Sortly style */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Left column: Product Information with image */}
-          <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5 flex flex-col">
-            <h2 className="text-sm font-semibold text-gray-100 mb-4">Product Information</h2>
+          <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-4 sm:p-5 flex flex-col">
+            <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">Product Information</h2>
             
             {/* Large product image - Sortly style */}
             <div className="flex-1 flex flex-col justify-center mb-4">
               <div className="flex justify-center h-full">
-                <div className="relative w-full h-full min-h-[200px] sm:min-h-[320px] rounded-lg overflow-hidden border border-[#3a3a3a] bg-[#1a1a1a]">
+                <div className="relative w-full h-full min-h-[200px] sm:min-h-[320px] rounded-lg overflow-hidden border border-stone-200 bg-[#f9f9f8]">
                   {editing ? (
                     editForm.imageUrl.trim() ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -592,7 +601,7 @@ export default function ProductHistoryPage() {
                         className="h-full w-full object-contain"
                       />
                     ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-4xl font-bold text-gray-300 uppercase">
+                      <div className="h-full w-full bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center text-4xl font-bold text-stone-600 dark:text-stone-300 uppercase">
                         {initials || 'PR'}
                       </div>
                     )
@@ -604,7 +613,7 @@ export default function ProductHistoryPage() {
                       className="h-full w-full object-contain"
                     />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-[#292929] to-[#3a3a3a] flex items-center justify-center text-4xl font-bold text-gray-300 uppercase">
+                    <div className="h-full w-full bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center text-4xl font-bold text-stone-600 dark:text-stone-300 uppercase">
                       {initials || 'PR'}
                     </div>
                   )}
@@ -615,28 +624,28 @@ export default function ProductHistoryPage() {
             {/* Image URL input when editing */}
             {editing && (
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Image URL</label>
+                <label className="block text-xs text-stone-500 dark:text-stone-400 mb-1">Image URL</label>
                 <input
                   value={editForm.imageUrl}
                   onChange={(e) => handleEditFieldChange('imageUrl', e.target.value)}
                   placeholder="Paste image URL (e.g. from Supabase storage)"
-                  className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                  className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
                 />
               </div>
             )}
 
             {/* Notes / Aliases */}
-            <div className="border-t border-[#3a3a3a] pt-4 mt-auto">
-              <p className="text-xs text-gray-400 mb-2">Notes</p>
+            <div className="border-t border-stone-200 dark:border-stone-700 pt-4 mt-auto">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-2">Notes</p>
               {editing ? (
                 <input
                   value={editForm.aliases}
                   onChange={(e) => handleEditFieldChange('aliases', e.target.value)}
                   placeholder="Alternative names, notes, etc."
-                  className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                  className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
                 />
               ) : (
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-stone-600 dark:text-stone-400">
                   {product.aliases && product.aliases.length
                     ? product.aliases.join(' / ')
                     : '-'}
@@ -649,84 +658,84 @@ export default function ProductHistoryPage() {
           <div className="space-y-5">
             {/* Metrics 2x2 grid */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">In hand</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-100">{inventory?.quantityOnHand || 0}</p>
+              <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mb-1">In hand</p>
+                <p className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-stone-100">{inventory?.quantityOnHand || 0}</p>
               </div>
-              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">In Transit</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-100">{inTransitQty}</p>
+              <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mb-1">In Transit</p>
+                <p className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-stone-100">{inTransitQty}</p>
               </div>
-              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">Price/unit</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-100">£{(inventory?.averageCostGBP || 0).toFixed(2)}</p>
+              <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mb-1">Price/unit</p>
+                <p className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-stone-100">£{(inventory?.averageCostGBP || 0).toFixed(2)}</p>
               </div>
-              <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-gray-400 mb-1">Total value</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-100">£{totalValue.toFixed(2)}</p>
+              <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 mb-1">Total value</p>
+                <p className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-stone-100">£{totalValue.toFixed(2)}</p>
               </div>
             </div>
 
             {/* Product Details card */}
-            <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5">
-              <h2 className="text-sm font-semibold text-gray-100 mb-4">Product Details</h2>
+            <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-4 sm:p-5">
+              <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">Product Details</h2>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Name</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">Name</p>
                   {editing ? (
                     <input
                       value={editForm.name}
                       onChange={(e) => handleEditFieldChange('name', e.target.value)}
-                      className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                      className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     />
                   ) : (
-                    <p className="text-sm text-gray-100">{product.name}</p>
+                    <p className="text-sm text-stone-900 dark:text-stone-100">{product.name}</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">SKU</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">SKU</p>
                   {editing ? (
                     <input
                       value={editForm.sku}
                       onChange={(e) => handleEditFieldChange('sku', e.target.value)}
-                      className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                      className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600 font-mono"
                     />
                   ) : (
-                    <p className="text-sm text-gray-100 font-mono">
+                    <p className="text-sm text-stone-900 dark:text-stone-100 font-mono">
                       {product.primarySku || product.supplierSku || '-'}
                     </p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Category</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">Category</p>
                   {editing ? (
                     <input
                       value={editForm.category}
                       onChange={(e) => handleEditFieldChange('category', e.target.value)}
-                      className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                      className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     />
                   ) : (
-                    <p className="text-sm text-gray-100">{product.category || '-'}</p>
+                    <p className="text-sm text-stone-900 dark:text-stone-100">{product.category || '-'}</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Supplier</p>
-                  <p className="text-sm text-gray-100">{supplier?.name || '-'}</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">Supplier</p>
+                  <p className="text-sm text-stone-900 dark:text-stone-100">{supplier?.name || '-'}</p>
                 </div>
               </div>
             </div>
 
             {/* QR & Barcode card */}
-            <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-4 sm:p-5">
-              <h2 className="text-sm font-semibold text-gray-100 mb-4">QR & Barcode</h2>
+            <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-4 sm:p-5">
+              <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">QR & Barcode</h2>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs text-gray-400">Barcodes</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Barcodes</p>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setScannerOpen(true)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] font-medium hover:bg-[#ff8c42] focus:outline-none focus:ring-1 focus:ring-[#ff6b35] sm:hidden"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-amber-600 text-white text-[11px] font-medium hover:bg-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-600 sm:hidden"
                     >
                       <svg
                         className="w-3.5 h-3.5 mr-1"
@@ -746,7 +755,7 @@ export default function ProductHistoryPage() {
                     <button
                       type="button"
                       onClick={handleClearBarcodes}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-200 hover:bg-[#3a3a3a]"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md border border-stone-200 dark:border-stone-700 text-[11px] text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700"
                     >
                       Clear
                     </button>
@@ -757,10 +766,10 @@ export default function ProductHistoryPage() {
                     value={editForm.barcodes}
                     onChange={(e) => handleEditFieldChange('barcodes', e.target.value)}
                     placeholder="Comma-separated barcodes"
-                    className="w-full rounded-md bg-[#1a1a1a] border border-[#3a3a3a] text-gray-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#ff6b35] font-mono"
+                    className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600 font-mono"
                   />
                 ) : (
-                  <p className="text-sm text-gray-100 font-mono">
+                  <p className="text-sm text-stone-900 dark:text-stone-100 font-mono">
                     {product.barcodes && product.barcodes.length
                       ? product.barcodes.join(', ')
                       : '-'}
@@ -772,9 +781,9 @@ export default function ProductHistoryPage() {
         </div>
 
         {/* Transit & invoice history */}
-        <div className="bg-[#2a2a2a] rounded-lg border border-[#3a3a3a] p-3 sm:p-5 md:p-6">
+        <div className="bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 p-3 sm:p-5 md:p-6">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-sm sm:text-base font-semibold text-gray-100">
+            <h2 className="text-sm sm:text-base font-semibold text-stone-900 dark:text-stone-100">
               Purchase orders & shipments
             </h2>
             {transit.length > 0 && (
@@ -801,7 +810,7 @@ export default function ProductHistoryPage() {
                         }
                       }}
                       disabled={savingPrices}
-                      className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a] disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md border border-stone-200 dark:border-stone-700 text-[11px] text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -809,7 +818,7 @@ export default function ProductHistoryPage() {
                       type="button"
                       onClick={handleSavePrices}
                       disabled={savingPrices}
-                      className="px-3 py-1.5 rounded-md bg-[#ff6b35] text-white text-[11px] hover:bg-[#ff8c42] disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-md bg-amber-600 text-white text-[11px] hover:bg-amber-700 disabled:opacity-50"
                     >
                       {savingPrices ? 'Saving…' : 'Save prices'}
                     </button>
@@ -821,7 +830,7 @@ export default function ProductHistoryPage() {
                       setEditingPrices(true);
                       setPriceError(null);
                     }}
-                    className="px-3 py-1.5 rounded-md border border-[#3a3a3a] text-[11px] text-gray-300 hover:bg-[#3a3a3a]"
+                    className="px-3 py-1.5 rounded-md border border-stone-200 dark:border-stone-700 text-[11px] text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700"
                   >
                     Edit prices
                   </button>
@@ -831,30 +840,30 @@ export default function ProductHistoryPage() {
           </div>
 
           {priceError && (
-            <div className="mb-3 rounded-md border border-red-500 bg-[#3a2a2a] px-3 py-2 text-[11px] text-red-200">
+            <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
               {priceError}
             </div>
           )}
 
           {transit.length === 0 ? (
-            <p className="text-xs sm:text-sm text-gray-400">No shipments recorded for this product yet.</p>
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">No shipments recorded for this product yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-[11px] sm:text-sm divide-y divide-[#3a3a3a]">
-                <thead className="bg-[#1a1a1a]">
+              <table className="min-w-full text-[11px] sm:text-sm divide-y divide-stone-200 dark:divide-stone-700">
+                <thead className="bg-[#f9f9f8] dark:bg-stone-900">
                   <tr>
-                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400">PO</th>
-                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 hidden sm:table-cell">Line</th>
-                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400 hidden md:table-cell">Invoice</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Ord</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Rcv</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400">Left</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 whitespace-nowrap">Unit £</th>
-                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-gray-400 hidden sm:table-cell">Total</th>
-                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-gray-400">Status</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-stone-500 dark:text-stone-400">PO</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-stone-500 dark:text-stone-400 hidden sm:table-cell">Line</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-stone-500 dark:text-stone-400 hidden md:table-cell">Invoice</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-stone-500 dark:text-stone-400 whitespace-nowrap">Ord</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-stone-500 dark:text-stone-400 hidden sm:table-cell">Rcv</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-stone-500 dark:text-stone-400">Left</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-stone-500 dark:text-stone-400 whitespace-nowrap">Unit £</th>
+                    <th className="px-2 sm:px-3 py-2 text-right font-medium text-stone-500 dark:text-stone-400 hidden sm:table-cell">Total</th>
+                    <th className="px-2 sm:px-3 py-2 text-left font-medium text-stone-500 dark:text-stone-400">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#3a3a3a]">
+                <tbody className="divide-y divide-stone-200 dark:divide-stone-700">
                   {transit.map((row) => {
                     const ordered = row.transit.quantity || 0;
                     const remaining = row.transit.remainingQuantity || 0;
@@ -886,19 +895,19 @@ export default function ProductHistoryPage() {
                       (row.poLine?.description || '').length > 60;
 
                     return (
-                      <tr key={row.transit.id} className="hover:bg-[#1a1a1a]">
+                      <tr key={row.transit.id} className="hover:bg-[#f9f9f8] dark:hover:bg-stone-700/50">
                         <td className="px-2 sm:px-3 py-2 align-top">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-gray-100 font-medium text-[11px] sm:text-xs">
+                            <span className="text-stone-900 dark:text-stone-100 font-medium text-[11px] sm:text-xs">
                               {po?.invoiceNumber || 'PO ' + (po?.id ?? '').slice(0, 8)}
                             </span>
                             {invoice && (
-                              <span className="text-gray-400 text-[10px] sm:text-xs hidden sm:block">
+                              <span className="text-stone-500 dark:text-stone-400 text-[10px] sm:text-xs hidden sm:block">
                                 Inv: {invoice.invoiceNumber || '-'}
                               </span>
                             )}
                             {po && (
-                              <span className="text-gray-500 text-[10px] sm:text-xs">
+                              <span className="text-stone-400 dark:text-stone-500 text-[10px] sm:text-xs">
                                 {formatDate(po.invoiceDate || po.createdAt)}
                               </span>
                             )}
@@ -906,14 +915,14 @@ export default function ProductHistoryPage() {
                         </td>
                         <td className="px-2 sm:px-3 py-2 align-top hidden sm:table-cell">
                           <p
-                            className={`text-gray-100 break-words ${
+                            className={`text-stone-900 dark:text-stone-100 break-words ${
                               isLongDescription ? 'text-[10px] sm:text-xs leading-snug' : ''
                             }`}
                           >
                             {row.poLine?.description || '-'}
                           </p>
                           {row.poLine?.supplierSku && (
-                            <p className="text-gray-400 font-mono">
+                            <p className="text-stone-500 font-mono">
                               {row.poLine.supplierSku}
                             </p>
                           )}
@@ -927,7 +936,7 @@ export default function ProductHistoryPage() {
                                   href={imageUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="group relative w-12 h-16 bg-[#2a2a2a] rounded border border-[#3a3a3a] hover:border-[#ff6b35] overflow-hidden transition-colors"
+                                  className="group relative w-12 h-16 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 hover:border-amber-600 overflow-hidden transition-colors"
                                   title={`View invoice page ${idx + 1}`}
                                 >
                                   <img
@@ -943,25 +952,25 @@ export default function ProductHistoryPage() {
                                 </a>
                               ))}
                               {po.imageUrls.length > 2 && (
-                                <div className="flex items-center justify-center w-12 h-16 bg-[#2a2a2a] rounded border border-[#3a3a3a] text-[10px] text-gray-400">
+                                <div className="flex items-center justify-center w-12 h-16 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 text-[10px] text-stone-500 dark:text-stone-400">
                                   +{po.imageUrls.length - 2}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <span className="text-gray-500 text-xs">-</span>
+                            <span className="text-stone-400 text-xs">-</span>
                           )}
                         </td>
-                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-stone-900 dark:text-stone-100">
                           {ordered}
                         </td>
-                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100 hidden sm:table-cell">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-stone-900 dark:text-stone-100 hidden sm:table-cell">
                           {received}
                         </td>
-                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-stone-900 dark:text-stone-100">
                           {remaining}
                         </td>
-                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-stone-900 dark:text-stone-100">
                           {editingPrices && row.poLine ? (
                             <input
                               type="number"
@@ -971,23 +980,23 @@ export default function ProductHistoryPage() {
                               }
                               min="0"
                               step="0.01"
-                              className="w-20 rounded-md border border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1 text-right text-xs text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#ff6b35]"
+                              className="w-20 rounded-md border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 px-2 py-1 text-right text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
                             />
                           ) : (
                             formatCurrency(defaultUnit)
                           )}
                         </td>
-                        <td className="px-2 sm:px-3 py-2 text-right align-top text-gray-100 hidden sm:table-cell">
+                        <td className="px-2 sm:px-3 py-2 text-right align-top text-stone-900 dark:text-stone-100 hidden sm:table-cell">
                           {formatCurrency(effectiveLineTotal)}
                         </td>
                         <td className="px-2 sm:px-3 py-2 align-top">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
                               row.transit.status === 'received'
-                                ? 'bg-[#1a3a1a] text-green-300'
+                                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
                                 : row.transit.status === 'partially_received'
-                                ? 'bg-[#3a2a1a] text-[#ffdd8a]'
-                                : 'bg-[#3a3a1a] text-gray-200'
+                                ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                                : 'bg-stone-100 dark:bg-stone-700 text-stone-800 dark:text-stone-300'
                             }`}
                           >
                             {row.transit.status.replace('_', ' ')}
@@ -1006,7 +1015,7 @@ export default function ProductHistoryPage() {
             type="button"
             onClick={handleDeleteProduct}
             disabled={deleting}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#3a1f1f] text-red-200 hover:bg-[#4a2323] disabled:opacity-50 text-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50 text-sm"
             aria-label={deleting ? 'Deleting product' : 'Delete product'}
           >
             {deleting ? 'Deleting…' : 'Delete product'}

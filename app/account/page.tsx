@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme, type ThemePreference } from '@/contexts/ThemeContext';
 import { authenticatedFetch } from '@/lib/api-client';
 import { supabase } from '@/lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
@@ -14,6 +15,7 @@ interface AccountSettings {
 
 export default function AccountPage() {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const searchParams = useSearchParams();
   const [settings, setSettings] = useState<AccountSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,28 +143,73 @@ export default function AccountPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b35]" />
-      </div>
-    );
-  }
+  const themeOptions: { value: ThemePreference; label: string; icon: React.ReactNode }[] = [
+    {
+      value: 'light',
+      label: 'Light',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+        </svg>
+      ),
+    },
+    {
+      value: 'dark',
+      label: 'Dark',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      ),
+    },
+    {
+      value: 'system',
+      label: 'System',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+  ];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-100 mb-8">Account Settings</h1>
+      <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 mb-8">Account Settings</h1>
+
+      {/* Appearance Section */}
+      <section className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-6 mb-6">
+        <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-1">Appearance</h2>
+        <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">Choose your preferred colour scheme.</p>
+        <div className="flex gap-2">
+          {themeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                theme === opt.value
+                  ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                  : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'
+              }`}
+            >
+              {opt.icon}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Email Section */}
-      <section className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-100 mb-1">Email Address</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Current email: <span className="text-gray-300">{user?.email}</span>
+      <section className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-6 mb-6">
+        <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mb-1">Email Address</h2>
+        <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">
+          Current email: <span className="text-stone-700 dark:text-stone-300">{user?.email}</span>
         </p>
 
         <form onSubmit={handleUpdateEmail} className="space-y-4">
           <div>
-            <label htmlFor="newEmail" className="block text-sm font-medium text-gray-400 mb-1">
+            <label htmlFor="newEmail" className="block text-sm font-medium text-stone-600 dark:text-stone-400 mb-1">
               New email address
             </label>
             <input
@@ -171,7 +218,7 @@ export default function AccountPage() {
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               placeholder="Enter new email address"
-              className="w-full px-3 py-2 bg-[#141414] border border-[#3a3a3a] rounded-lg text-gray-100 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent"
+              className="w-full px-3 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg text-stone-900 dark:text-stone-100 text-sm placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent"
               required
             />
           </div>
@@ -180,8 +227,8 @@ export default function AccountPage() {
             <div
               className={`text-sm px-3 py-2 rounded-lg ${
                 emailMessage.type === 'success'
-                  ? 'bg-green-900/30 text-green-400 border border-green-800'
-                  : 'bg-red-900/30 text-red-400 border border-red-800'
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
               }`}
             >
               {emailMessage.text}
@@ -191,7 +238,7 @@ export default function AccountPage() {
           <button
             type="submit"
             disabled={emailSaving || !newEmail.trim()}
-            className="px-4 py-2 bg-[#ff6b35] text-white text-sm font-medium rounded-lg hover:bg-[#ff8c42] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {emailSaving ? 'Updating...' : 'Update Email'}
           </button>
@@ -199,31 +246,31 @@ export default function AccountPage() {
       </section>
 
       {/* Shopify Section */}
-      <section className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-xl p-6">
+      <section className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-1">
           <img src="/Shopify_icon.svg" alt="Shopify" className="w-6 h-6" />
-          <h2 className="text-lg font-semibold text-gray-100">Shopify Integration</h2>
+          <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Shopify Integration</h2>
           {settings?.shopifyConnected && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-900/30 text-green-400 border border-green-800">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
               Connected
             </span>
           )}
         </div>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">
           Link your Shopify store to sync orders and inventory.
         </p>
 
         {settings?.shopifyConnected ? (
           <div className="space-y-4">
-            <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-4">
+            <div className="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-300">
+                  <p className="text-sm font-medium text-stone-700 dark:text-stone-300">
                     {settings.shopifyStoreDomain}
                   </p>
                   {settings.shopifyConnectedAt && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
                       Connected {new Date(settings.shopifyConnectedAt).toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'short',
@@ -240,8 +287,8 @@ export default function AccountPage() {
               <div
                 className={`text-sm px-3 py-2 rounded-lg ${
                   shopifyMessage.type === 'success'
-                    ? 'bg-green-900/30 text-green-400 border border-green-800'
-                    : 'bg-red-900/30 text-red-400 border border-red-800'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
                 }`}
               >
                 {shopifyMessage.text}
@@ -251,7 +298,7 @@ export default function AccountPage() {
             <button
               onClick={handleDisconnectShopify}
               disabled={shopifySaving}
-              className="px-4 py-2 bg-[#2a2a2a] text-red-400 text-sm font-medium rounded-lg hover:bg-[#3a3a3a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-[#3a3a3a]"
+              className="px-4 py-2 bg-white dark:bg-stone-900 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-stone-300 dark:border-stone-600"
             >
               {shopifySaving ? 'Disconnecting...' : 'Disconnect Shopify'}
             </button>
@@ -259,7 +306,7 @@ export default function AccountPage() {
         ) : (
           <form onSubmit={handleConnectShopify} className="space-y-4">
             <div>
-              <label htmlFor="shopifyDomain" className="block text-sm font-medium text-gray-400 mb-1">
+              <label htmlFor="shopifyDomain" className="block text-sm font-medium text-stone-600 mb-1">
                 Store domain
               </label>
               <input
@@ -268,10 +315,10 @@ export default function AccountPage() {
                 value={shopifyDomain}
                 onChange={(e) => setShopifyDomain(e.target.value)}
                 placeholder="your-store.myshopify.com"
-                className="w-full px-3 py-2 bg-[#141414] border border-[#3a3a3a] rounded-lg text-gray-100 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent"
+                className="w-full px-3 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded-lg text-stone-900 dark:text-stone-100 text-sm placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent"
                 required
               />
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
                 e.g. your-store.myshopify.com
               </p>
             </div>
@@ -280,8 +327,8 @@ export default function AccountPage() {
               <div
                 className={`text-sm px-3 py-2 rounded-lg ${
                   shopifyMessage.type === 'success'
-                    ? 'bg-green-900/30 text-green-400 border border-green-800'
-                    : 'bg-red-900/30 text-red-400 border border-red-800'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
                 }`}
               >
                 {shopifyMessage.text}
@@ -291,12 +338,12 @@ export default function AccountPage() {
             <button
               type="submit"
               disabled={shopifyConnecting || !shopifyDomain.trim()}
-              className="px-4 py-2 bg-[#96bf48] text-white text-sm font-medium rounded-lg hover:bg-[#a8d14f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
+              className="px-4 py-2 bg-[#7ea33d] text-white text-sm font-medium rounded-lg hover:bg-[#8ebf4d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
             >
               <img src="/Shopify_icon.svg" alt="Shopify" className="w-4 h-4" />
               {shopifyConnecting ? 'Redirecting to Shopify...' : 'Connect with Shopify'}
             </button>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-stone-500 dark:text-stone-400">
               You&apos;ll be redirected to Shopify to authorize access to your store.
             </p>
           </form>
