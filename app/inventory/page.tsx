@@ -1025,10 +1025,11 @@ export default function InventoryPage() {
       </div>{/* end sticky top */}
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full grid grid-cols-1 md:grid-cols-[auto_1fr] gap-0">
+      <div className="flex-1 overflow-hidden w-full">
+        <div className="h-full w-full flex gap-0">
           {/* Folders sidebar - hidden on mobile */}
-          <div className={`bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 overflow-hidden flex-col h-full transition-all duration-300 ease-in-out ${foldersPanelCollapsed ? 'md:w-0 md:border-0 md:opacity-0 md:overflow-hidden hidden' : 'hidden md:flex md:w-64'}`}>
+          <div className={`hidden md:block overflow-hidden flex-shrink-0 transition-[width,opacity] duration-300 ease-in-out ${foldersPanelCollapsed ? 'w-0 opacity-0' : 'w-64 opacity-100'}`}>
+            <div className="w-64 h-full flex flex-col bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700">
             {/* Drawer header */}
             <div className="px-3 py-2 border-b border-stone-200 dark:border-stone-700 flex items-center justify-between bg-white dark:bg-stone-900">
               <div className="flex flex-col">
@@ -1299,15 +1300,16 @@ export default function InventoryPage() {
                 )}
               </div>
             </div>
+            </div>
           </div>
 
           {/* Main scrollable content */}
-          <div className="flex-1 overflow-y-auto min-w-0 px-3 sm:px-4 lg:px-6 py-4" onScroll={(e) => {
+          <div className="flex-1 overflow-y-auto w-full px-3 sm:px-4 lg:px-6 py-4" onScroll={(e) => {
             const el = e.currentTarget;
             setHeaderScrolled(el.scrollTop > 10);
           }}>
             {loading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-24">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
               </div>
             ) : visibleItems.length === 0 ? (
