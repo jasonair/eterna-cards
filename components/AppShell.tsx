@@ -71,14 +71,14 @@ export default function AppShell({ children }: AppShellProps) {
 
   // Authenticated user - show full app shell
   return (
-    <div className="min-h-screen flex bg-[#f9f9f8] dark:bg-stone-900">
+    <div className="h-[100dvh] flex overflow-hidden bg-[#f9f9f8] dark:bg-stone-900">
       <MobileNav />
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((prev) => !prev)}
       />
       <main
-        className={`flex-1 pb-20 sm:pb-0 pt-16 sm:pt-0 transition-[margin-left] duration-200 overflow-x-hidden min-w-0 ${
+        className={`flex-1 pb-20 sm:pb-0 pt-16 sm:pt-0 transition-[margin-left] duration-200 overflow-hidden min-w-0 flex flex-col ${
           collapsed ? 'sm:ml-24' : 'sm:ml-48 lg:ml-56'
         }`}
       >
