@@ -90,6 +90,7 @@ export default function InventoryPage() {
   }, [foldersPanelCollapsed]);
 
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false);
 
   const [customFolders, setCustomFolders] = useState<
     { id: string; name: string; dbId?: string; parentId?: string | null }[]
@@ -870,8 +871,9 @@ export default function InventoryPage() {
         </div>
 
         {/* Toolbar - mobile: search row + controls row; desktop: single row */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         {/* Row 1: Search (full width on mobile) */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 sm:order-2">
           <div className="relative flex-1">
             <input
               value={search}
@@ -942,8 +944,20 @@ export default function InventoryPage() {
           </button>
         </div>
         {/* Row 2: Breadcrumb + view toggle + new item (mobile) */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 sm:order-1 sm:flex-shrink-0">
           <div className="flex items-center gap-1.5 text-xs text-stone-500 min-w-0 overflow-hidden">
+            {/* Mobile folders button - always visible on mobile */}
+            <button
+              type="button"
+              onClick={() => setMobileFoldersOpen(true)}
+              className="md:hidden inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-stone-200 dark:border-stone-700 text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-700 transition-colors text-[11px] font-medium mr-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Folders
+            </button>
+            {/* Desktop folders button - only when collapsed */}
             {foldersPanelCollapsed && (
               <button
                 type="button"
@@ -1022,6 +1036,7 @@ export default function InventoryPage() {
             </button>
           </div>
         </div>
+        </div>{/* end toolbar wrapper */}
       </div>{/* end sticky top */}
 
       {/* Scrollable content */}
@@ -1526,6 +1541,125 @@ export default function InventoryPage() {
           onClose={() => setScannerOpen(false)}
         />
       )}
+
+      {/* Mobile folders drawer */}
+      <div className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ${mobileFoldersOpen ? 'visible' : 'invisible'}`}>
+          {/* Backdrop */}
+          <div
+            className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${mobileFoldersOpen ? 'opacity-100' : 'opacity-0'}`}
+            onClick={() => setMobileFoldersOpen(false)}
+          />
+          {/* Drawer */}
+          <div className={`absolute inset-y-0 left-0 w-72 flex flex-col bg-white dark:bg-stone-900 shadow-xl transition-transform duration-300 ease-in-out ${mobileFoldersOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            {/* Header - same as desktop sidebar */}
+            <div className="px-3 py-2 border-b border-stone-200 dark:border-stone-700 flex items-center justify-between bg-white dark:bg-stone-900">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-stone-800 dark:text-stone-200 uppercase tracking-wide">Available inventory</span>
+                <span className="text-[10px] text-stone-400 dark:text-stone-500">Browse locations & folders</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleStartNewFolder}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 bg-stone-50 dark:bg-stone-800 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-xs"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileFoldersOpen(false)}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-stone-200 dark:border-stone-700 text-stone-400 bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-stone-600 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {/* Folder tree - identical to desktop sidebar */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden py-2">
+              {isCreatingFolder && (
+                <div className="px-3 pb-2 flex items-center gap-2">
+                  <input
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleCreateFolder(); }
+                      else if (e.key === 'Escape') { e.preventDefault(); handleCancelNewFolder(); }
+                    }}
+                    placeholder="New folder name"
+                    autoFocus
+                    className="flex-1 rounded-md bg-[#f9f9f8] dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[11px] text-stone-900 dark:text-stone-100 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                  />
+                  <button type="button" onClick={handleCreateFolder} className="px-2 py-1 text-[11px] rounded-md bg-amber-600 text-white hover:bg-amber-700">Save</button>
+                  <button type="button" onClick={handleCancelNewFolder} className="px-1.5 py-1 text-[11px] rounded-md text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100">×</button>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => { setActiveFolderId('all'); setMobileFoldersOpen(false); }}
+                className={`flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium border-l-2 transition-colors ${
+                  activeFolderId === 'all'
+                    ? 'border-amber-600 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100'
+                    : 'border-transparent text-stone-800 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 7.5C4 6.67157 4.67157 6 5.5 6H9l2 2h7.5C19.3284 8 20 8.67157 20 9.5V16.5C20 17.3284 19.3284 18 18.5 18H5.5C4.67157 18 4 17.3284 4 16.5V7.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  All items
+                </span>
+              </button>
+              <div className="mt-1 space-y-0 text-sm">
+                {folderTree.length === 0 ? (
+                  <p className="text-[11px] text-stone-400 px-4 pt-1">No folders yet.</p>
+                ) : (
+                  folderTree.map((folder) => {
+                    if (hasCollapsedAncestor(folder.id)) return null;
+                    const isCustom = folder.isCustom;
+                    const paddingLeft = 20 + folder.depth * 14;
+                    const hasChildren = folderTree.some((f) => f.parentId === folder.id);
+                    return (
+                      <div
+                        key={`mobile-${folder.id}-${folder.depth}`}
+                        className={`flex items-center justify-between w-full py-2.5 border-l-2 transition-colors ${
+                          activeFolderId === folder.id
+                            ? 'border-amber-600 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100'
+                            : 'border-transparent text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
+                        }`}
+                        style={{ paddingLeft }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => { setActiveFolderId(folder.id); setMobileFoldersOpen(false); }}
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                        >
+                          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                            <path d="M4.5 8.5C4.5 7.67157 5.17157 7 6 7H9.5L11 8.5H18C18.8284 8.5 19.5 9.17157 19.5 10V16C19.5 16.8284 18.8284 17.5 18 17.5H6C5.17157 17.5 4.5 16.8284 4.5 16V8.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <span className="truncate">{folder.name}</span>
+                        </button>
+                        <div className="flex items-center gap-1 pr-2">
+                          {isCustom && hasChildren && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); toggleFolderCollapsed(folder.id); }} className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-amber-50">
+                              <svg className={`h-3 w-3 transform transition-transform ${collapsedFolders[folder.id] ? '' : 'rotate-90'}`} viewBox="0 0 20 20" fill="none">
+                                <path d="M7 5L12 10L7 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                          )}
+                          {isCustom && (
+                            <button type="button" onClick={() => handleDeleteFolder(folder.id)} className="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs text-stone-400 hover:text-red-500 hover:bg-red-50">×</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
   );
 }
