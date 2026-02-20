@@ -873,8 +873,8 @@ export default function InventoryPage() {
         {/* Toolbar - mobile: search row + controls row; desktop: single row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         {/* Row 1: Search (full width on mobile) */}
-        <div className="flex items-center gap-2 flex-1 sm:order-2">
-          <div className="relative flex-1">
+        <div className="flex items-center gap-2 flex-1 sm:flex-none sm:ml-auto sm:order-2">
+          <div className="relative flex-1 sm:max-w-xs sm:w-72">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
