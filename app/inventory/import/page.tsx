@@ -335,7 +335,7 @@ export default function ImportInventoryPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#f9f9f8]">
+    <div className="h-full overflow-y-auto bg-white">
     <div className="py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
       <div className="max-w-[1400px] mx-auto space-y-6">
         {/* Header */}
@@ -344,7 +344,7 @@ export default function ImportInventoryPage() {
             <button
               type="button"
               onClick={() => router.push('/inventory')}
-              className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-amber-600 mb-2"
+              className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-red-600 mb-2"
             >
               <span>←</span>
               <span>Back to inventory</span>
@@ -376,13 +376,13 @@ export default function ImportInventoryPage() {
               (s === 'preview' && ['importing', 'done'].includes(step));
             return (
               <div key={s} className="flex items-center gap-2">
-                {i > 0 && <div className={`w-8 h-px ${isPast ? 'bg-amber-600' : 'bg-stone-100'}`} />}
+                {i > 0 && <div className={`w-8 h-px ${isPast ? 'bg-red-600' : 'bg-stone-100'}`} />}
                 <div
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
                     isActive
-                      ? 'border-amber-600 bg-amber-600/10 text-amber-600'
+                      ? 'border-red-600 bg-red-600/10 text-red-600'
                       : isPast
-                        ? 'border-amber-600/50 text-amber-600/70'
+                        ? 'border-red-600/50 text-red-600/70'
                         : 'border-stone-200 text-stone-400'
                   }`}
                 >
@@ -416,8 +416,8 @@ export default function ImportInventoryPage() {
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
                 isDragging
-                  ? 'border-amber-600 bg-amber-600/5'
-                  : 'border-stone-200 hover:border-amber-600/50'
+                  ? 'border-red-600 bg-red-600/5'
+                  : 'border-stone-200 hover:border-red-600/50'
               }`}
             >
               <svg className="w-12 h-12 mx-auto text-stone-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -429,7 +429,7 @@ export default function ImportInventoryPage() {
               <p className="text-stone-400 text-xs mb-4">
                 or click below to browse
               </p>
-              <label className="inline-flex items-center px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 cursor-pointer">
+              <label className="inline-flex items-center px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 cursor-pointer">
                 Choose File
                 <input
                   type="file"
@@ -457,7 +457,7 @@ export default function ImportInventoryPage() {
           <div className="space-y-4">
             {mappingLoading ? (
               <div className="bg-white rounded-lg border border-stone-200 p-8 text-center">
-                <div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-sm text-stone-600">Analyzing your columns...</p>
                 <p className="text-xs text-stone-400 mt-1">Using {mappingMethod === 'ai' ? 'AI' : 'auto-detection'} to map columns</p>
               </div>
@@ -470,7 +470,7 @@ export default function ImportInventoryPage() {
                       <p className="text-xs text-stone-500 mt-0.5">
                         File: <span className="text-stone-600">{fileName}</span> — {csvRows.length} rows detected
                         {mappingMethod && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-amber-600/10 text-amber-600">
+                          <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-red-600/10 text-red-600">
                             {mappingMethod === 'ai' ? 'AI mapped' : 'Auto-detected'}
                           </span>
                         )}
@@ -480,7 +480,7 @@ export default function ImportInventoryPage() {
 
                   <div className="space-y-2">
                     {csvHeaders.map((header) => (
-                      <div key={header} className="flex items-center gap-3 py-2 px-3 rounded-md bg-[#f9f9f8] border border-stone-200">
+                      <div key={header} className="flex items-center gap-3 py-2 px-3 rounded-md bg-white border border-stone-200">
                         <div className="flex-1 min-w-0">
                           <span className="text-xs text-stone-600 font-mono truncate block">{header}</span>
                           {csvRows[0] && (
@@ -495,10 +495,10 @@ export default function ImportInventoryPage() {
                         <select
                           value={mapping[header] || ''}
                           onChange={(e) => handleMappingChange(header, e.target.value as KnownField | '')}
-                          className={`w-48 rounded-md border text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-600 ${
+                          className={`w-48 rounded-md border text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-600 ${
                             mapping[header]
-                              ? 'bg-amber-600/10 border-amber-600/30 text-amber-600'
-                              : 'bg-[#f9f9f8] border-stone-200 text-stone-500'
+                              ? 'bg-red-600/10 border-red-600/30 text-red-600'
+                              : 'bg-white border-stone-200 text-stone-500'
                           }`}
                         >
                           <option value="">— Skip this column —</option>
@@ -542,7 +542,7 @@ export default function ImportInventoryPage() {
                     type="button"
                     onClick={applyMapping}
                     disabled={!hasNameMapping}
-                    className="px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continue to Review
                   </button>
@@ -587,7 +587,7 @@ export default function ImportInventoryPage() {
                   </thead>
                   <tbody>
                     {previewRows.map((row, i) => (
-                      <tr key={i} className="border-b border-stone-200 hover:bg-amber-50/30">
+                      <tr key={i} className="border-b border-stone-200 hover:bg-red-50/30">
                         <td className="py-1.5 px-2 text-stone-400">{i + 1}</td>
                         <td className="py-1.5 px-2">
                           {editingCell?.row === i && editingCell?.field === 'name' ? (
@@ -596,12 +596,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.name}
                               onBlur={(e) => { updatePreviewRow(i, 'name', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'name', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-full bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs focus:outline-none"
+                              className="w-full bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'name' })}
-                              className="text-stone-900 cursor-pointer hover:text-amber-600 block truncate max-w-[300px]"
+                              className="text-stone-900 cursor-pointer hover:text-red-600 block truncate max-w-[300px]"
                             >
                               {row.name || <span className="text-red-600">Missing</span>}
                             </span>
@@ -614,12 +614,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.primarySku || ''}
                               onBlur={(e) => { updatePreviewRow(i, 'primarySku', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'primarySku', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-full bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs font-mono focus:outline-none"
+                              className="w-full bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs font-mono focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'primarySku' })}
-                              className="text-stone-500 cursor-pointer hover:text-amber-600 font-mono"
+                              className="text-stone-500 cursor-pointer hover:text-red-600 font-mono"
                             >
                               {row.primarySku || '—'}
                             </span>
@@ -632,12 +632,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.category || ''}
                               onBlur={(e) => { updatePreviewRow(i, 'category', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'category', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-full bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs focus:outline-none"
+                              className="w-full bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'category' })}
-                              className="text-stone-500 cursor-pointer hover:text-amber-600"
+                              className="text-stone-500 cursor-pointer hover:text-red-600"
                             >
                               {row.category || '—'}
                             </span>
@@ -650,12 +650,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.supplier || ''}
                               onBlur={(e) => { updatePreviewRow(i, 'supplier', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'supplier', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-full bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs focus:outline-none"
+                              className="w-full bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'supplier' })}
-                              className="text-stone-500 cursor-pointer hover:text-amber-600"
+                              className="text-stone-500 cursor-pointer hover:text-red-600"
                             >
                               {row.supplier || '—'}
                             </span>
@@ -674,12 +674,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.quantityOnHand || 0}
                               onBlur={(e) => { updatePreviewRow(i, 'quantityOnHand', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'quantityOnHand', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-20 bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs text-right focus:outline-none"
+                              className="w-20 bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs text-right focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'quantityOnHand' })}
-                              className={`cursor-pointer hover:text-amber-600 ${(row.quantityOnHand || 0) > 0 ? 'text-stone-900' : 'text-stone-400'}`}
+                              className={`cursor-pointer hover:text-red-600 ${(row.quantityOnHand || 0) > 0 ? 'text-stone-900' : 'text-stone-400'}`}
                             >
                               {row.quantityOnHand || 0}
                             </span>
@@ -693,12 +693,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.quantityInTransit || 0}
                               onBlur={(e) => { updatePreviewRow(i, 'quantityInTransit', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'quantityInTransit', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-20 bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs text-right focus:outline-none"
+                              className="w-20 bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs text-right focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'quantityInTransit' })}
-                              className={`cursor-pointer hover:text-amber-600 ${(row.quantityInTransit || 0) > 0 ? 'text-blue-400' : 'text-stone-400'}`}
+                              className={`cursor-pointer hover:text-red-600 ${(row.quantityInTransit || 0) > 0 ? 'text-blue-400' : 'text-stone-400'}`}
                             >
                               {row.quantityInTransit || 0}
                             </span>
@@ -713,12 +713,12 @@ export default function ImportInventoryPage() {
                               defaultValue={row.averageCostGBP || 0}
                               onBlur={(e) => { updatePreviewRow(i, 'averageCostGBP', e.target.value); setEditingCell(null); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { updatePreviewRow(i, 'averageCostGBP', (e.target as HTMLInputElement).value); setEditingCell(null); } }}
-                              className="w-24 bg-[#f9f9f8] border border-amber-600 rounded px-1 py-0.5 text-stone-900 text-xs text-right focus:outline-none"
+                              className="w-24 bg-white border border-red-600 rounded px-1 py-0.5 text-stone-900 text-xs text-right focus:outline-none"
                             />
                           ) : (
                             <span
                               onClick={() => setEditingCell({ row: i, field: 'averageCostGBP' })}
-                              className={`cursor-pointer hover:text-amber-600 ${(row.averageCostGBP || 0) > 0 ? 'text-stone-900' : 'text-stone-400'}`}
+                              className={`cursor-pointer hover:text-red-600 ${(row.averageCostGBP || 0) > 0 ? 'text-stone-900' : 'text-stone-400'}`}
                             >
                               £{(row.averageCostGBP || 0).toFixed(2)}
                             </span>
@@ -787,7 +787,7 @@ export default function ImportInventoryPage() {
                 type="button"
                 onClick={handleImport}
                 disabled={previewRows.length === 0}
-                className="px-6 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Import {previewRows.length} Products
               </button>
@@ -798,7 +798,7 @@ export default function ImportInventoryPage() {
         {/* Step 3.5: Importing */}
         {step === 'importing' && (
           <div className="bg-white rounded-lg border border-stone-200 p-8 text-center">
-            <div className="w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-sm text-stone-600">Importing {previewRows.length} products...</p>
             <p className="text-xs text-stone-400 mt-1">This may take a moment for large imports</p>
           </div>
@@ -850,7 +850,7 @@ export default function ImportInventoryPage() {
               <button
                 type="button"
                 onClick={() => router.push('/inventory')}
-                className="px-6 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700"
+                className="px-6 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700"
               >
                 Go to Inventory
               </button>

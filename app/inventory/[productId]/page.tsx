@@ -596,18 +596,18 @@ export default function ProductHistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-white dark:bg-stone-900 py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
         <div className="max-w-[1400px] mx-auto">
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-amber-600 mb-6"
+            className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-red-600 mb-6"
           >
             <span>←</span>
             <span>Back to inventory</span>
           </button>
           <div className="flex items-center justify-center py-24">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
           </div>
         </div>
       </div>
@@ -616,12 +616,12 @@ export default function ProductHistoryPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-8 px-4">
+      <div className="min-h-screen bg-white dark:bg-stone-900 py-8 px-4">
         <div className="max-w-3xl mx-auto">
           <button
             type="button"
             onClick={() => router.back()}
-            className="mb-4 text-sm text-amber-600 hover:text-amber-700"
+            className="mb-4 text-sm text-red-600 hover:text-red-700"
           >
             ← Back
           </button>
@@ -727,7 +727,7 @@ export default function ProductHistoryPage() {
     : null;
 
   return (
-    <div className="h-full overflow-y-auto bg-[#f9f9f8] dark:bg-stone-900">
+    <div className="h-full overflow-y-auto bg-white dark:bg-stone-900">
       <div className="py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
         <div className="max-w-[1400px] mx-auto space-y-4">
           {/* Header row - Sortly style */}
@@ -736,7 +736,7 @@ export default function ProductHistoryPage() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-amber-600 mb-2"
+                className="inline-flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 hover:text-red-600 mb-2"
               >
                 <span>←</span>
                 <span>Back to inventory</span>
@@ -788,7 +788,7 @@ export default function ProductHistoryPage() {
                     type="button"
                     onClick={handleSaveProduct}
                     disabled={saving}
-                    className="px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+                    className="px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
                   >
                     {saving ? 'Saving…' : 'Save'}
                   </button>
@@ -797,7 +797,7 @@ export default function ProductHistoryPage() {
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -818,7 +818,7 @@ export default function ProductHistoryPage() {
               {/* Large product image - Sortly style */}
               <div className="mb-4">
                 <div className="flex justify-center">
-                  <div className="relative w-full h-[180px] sm:h-[210px] md:h-[240px] rounded-lg overflow-hidden border border-stone-200 bg-[#f9f9f8]">
+                  <div className="relative w-full h-[180px] sm:h-[210px] md:h-[240px] rounded-lg overflow-hidden border border-stone-200 bg-white">
                     {editing ? (
                       editForm.imageUrl.trim() ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -828,7 +828,7 @@ export default function ProductHistoryPage() {
                           className="h-full w-full object-contain p-2"
                         />
                       ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center text-4xl font-bold text-stone-600 dark:text-stone-300 uppercase">
+                        <div className="h-full w-full bg-stone-100 dark:bg-stone-700 flex items-center justify-center text-4xl font-bold text-stone-600 dark:text-stone-300 uppercase">
                           {initials || 'PR'}
                         </div>
                       )
@@ -840,7 +840,7 @@ export default function ProductHistoryPage() {
                         className="h-full w-full object-contain p-2"
                       />
                     ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-stone-100 to-stone-200 dark:from-stone-700 dark:to-stone-600 flex items-center justify-center text-4xl font-bold text-stone-600 dark:text-stone-300 uppercase">
+                      <div className="h-full w-full bg-stone-100 dark:bg-stone-700 flex items-center justify-center text-4xl font-bold text-stone-600 dark:text-stone-300 uppercase">
                         {initials || 'PR'}
                       </div>
                     )}
@@ -856,7 +856,7 @@ export default function ProductHistoryPage() {
                     value={editForm.imageUrl}
                     onChange={(e) => handleEditFieldChange('imageUrl', e.target.value)}
                     placeholder="Paste image URL (e.g. from Supabase storage)"
-                    className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                    className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600"
                   />
                 </div>
               )}
@@ -872,7 +872,7 @@ export default function ProductHistoryPage() {
                       <input
                         value={editForm.name}
                         onChange={(e) => handleEditFieldChange('name', e.target.value)}
-                        className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                        className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600"
                       />
                     ) : (
                       <p className="text-sm text-stone-900 dark:text-stone-100">{product.name}</p>
@@ -884,7 +884,7 @@ export default function ProductHistoryPage() {
                       <input
                         value={editForm.sku}
                         onChange={(e) => handleEditFieldChange('sku', e.target.value)}
-                        className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600 font-mono"
+                        className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600 font-mono"
                       />
                     ) : (
                       <p className="text-sm text-stone-900 dark:text-stone-100 font-mono">
@@ -898,7 +898,7 @@ export default function ProductHistoryPage() {
                       <input
                         value={editForm.category}
                         onChange={(e) => handleEditFieldChange('category', e.target.value)}
-                        className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                        className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600"
                       />
                     ) : (
                       <p className="text-sm text-stone-900 dark:text-stone-100">{product.category || '-'}</p>
@@ -915,7 +915,7 @@ export default function ProductHistoryPage() {
                         value={editForm.aliases}
                         onChange={(e) => handleEditFieldChange('aliases', e.target.value)}
                         placeholder="Alternative names, notes, etc."
-                        className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                        className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600"
                       />
                     ) : (
                       <p className="text-sm text-stone-600 dark:text-stone-400 max-h-14 overflow-y-auto pr-1">
@@ -968,7 +968,7 @@ export default function ProductHistoryPage() {
                             step="0.01"
                             value={editForm.targetMargin}
                             onChange={(e) => handleEditFieldChange('targetMargin', e.target.value)}
-                            className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                            className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-600"
                           />
                         ) : (
                           <p className="text-sm text-stone-900 dark:text-stone-100">
@@ -986,14 +986,14 @@ export default function ProductHistoryPage() {
                             step="0.01"
                             value={editForm.pricingSalesTaxPct}
                             onChange={(e) => handleEditFieldChange('pricingSalesTaxPct', e.target.value)}
-                            className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                            className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-600"
                           />
                         ) : (
                           <p className="text-sm text-stone-900 dark:text-stone-100">{product.pricingSalesTaxPct}%</p>
                         )}
                       </div>
                       <div>
-                        <p className="text-[11px] text-stone-500 dark:text-stone-400 mb-1">Shopify fee %</p>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400 mb-1">Marketplace fee %</p>
                         {editing ? (
                           <input
                             type="number"
@@ -1002,7 +1002,7 @@ export default function ProductHistoryPage() {
                             step="0.01"
                             value={editForm.pricingShopifyFeePct}
                             onChange={(e) => handleEditFieldChange('pricingShopifyFeePct', e.target.value)}
-                            className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                            className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-600"
                           />
                         ) : (
                           <p className="text-sm text-stone-900 dark:text-stone-100">{product.pricingShopifyFeePct}%</p>
@@ -1017,7 +1017,7 @@ export default function ProductHistoryPage() {
                             step="0.01"
                             value={editForm.pricingPostagePackagingGbp}
                             onChange={(e) => handleEditFieldChange('pricingPostagePackagingGbp', e.target.value)}
-                            className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                            className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-600"
                           />
                         ) : (
                           <p className="text-sm text-stone-900 dark:text-stone-100">
@@ -1028,7 +1028,7 @@ export default function ProductHistoryPage() {
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                        Projected Shopify price on receive
+                        Projected channel price on receive
                       </p>
                       <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
                         {projectedShopifyPrice != null ? `£${projectedShopifyPrice.toFixed(2)}` : '-'}
@@ -1064,14 +1064,14 @@ export default function ProductHistoryPage() {
                             onChange={(e) =>
                               handleEditFieldChange('pricingGreenlight', e.target.checked)
                             }
-                            className="rounded border-stone-300 dark:border-stone-600 text-amber-600 focus:ring-amber-600"
+                            className="rounded border-stone-300 dark:border-stone-600 text-red-600 focus:ring-red-600"
                           />
-                          Auto-push price to Shopify when stock is received
+                          Auto-push price to connected channel when stock is received
                         </label>
                       ) : (
                         <p className="text-xs text-stone-700 dark:text-stone-300">
                           {product.pricingGreenlight
-                            ? 'Greenlit for auto Shopify price updates on receive'
+                            ? 'Greenlit for auto channel price updates on receive'
                             : 'Not greenlit'}
                         </p>
                       )}
@@ -1083,24 +1083,19 @@ export default function ProductHistoryPage() {
                       {/* Internal Source (Invoices) */}
                       {transit && transit.length > 0 && (
                         <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-stone-100 dark:bg-stone-700 border border-stone-200 dark:border-stone-600">
-                          <svg className="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-3.5 h-3.5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           <span className="text-xs font-medium text-stone-700 dark:text-stone-200">Purchasing (Invoices)</span>
                         </div>
                       )}
 
-                      {/* External Integrations (Shopify, etc.) */}
-                      {data.integrations && data.integrations.map((int) => (
+                      {/* External Integrations */}
+                      {data.integrations && data.integrations.filter((int) => int.platform.toLowerCase() !== 'shopify').map((int) => (
                         <div
                           key={int.platform}
                           className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-stone-100 dark:bg-stone-700 border border-stone-200 dark:border-stone-600"
                         >
-                          {int.platform.toLowerCase() === 'shopify' && (
-                            <svg className="w-3.5 h-3.5 text-[#95bf47]" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M4.17 3.3C4.35 3.15 4.5 3 4.83 3c.33 0 1.25.13 2.13.25.88.13 2.22.42 2.22.42s5.75-2 7.04-2.58c1.3-.58 2.37-.1 2.37.58 0 .68-1.54 10.37-1.54 10.37s.21.3.62.71c.42.41 1.25 1.12 1.25 2.12 0 .67-.42 1.46-.83 1.88s-1.04.41-1.46.41c-.41 0-1.83-.95-1.83-.95s-2.04 1.25-3.33 1.83c-1.3.58-3.08.75-4.5.75-.5 0-.91-.12-1.33-.25C5.17 21.36 3.5 19.38 3 16.4c-.2-.8-.4-4.83-.5-7.5-.1-2.67.17-5.17.67-5.6z" />
-                            </svg>
-                          )}
                           <span className="text-xs font-medium text-stone-700 dark:text-stone-200 capitalize">
                             {int.platform}
                           </span>
@@ -1125,7 +1120,7 @@ export default function ProductHistoryPage() {
                       <button
                         type="button"
                         onClick={() => setScannerOpen(true)}
-                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-amber-600 text-white text-[11px] font-medium hover:bg-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-600 sm:hidden"
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-red-600 text-white text-[11px] font-medium hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-600 sm:hidden"
                       >
                         <svg
                           className="w-3.5 h-3.5 mr-1"
@@ -1156,7 +1151,7 @@ export default function ProductHistoryPage() {
                       value={editForm.barcodes}
                       onChange={(e) => handleEditFieldChange('barcodes', e.target.value)}
                       placeholder="Comma-separated barcodes"
-                      className="w-full rounded-md bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-600 font-mono"
+                      className="w-full rounded-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-600 font-mono"
                     />
                   ) : (
                     <p className="text-sm text-stone-900 dark:text-stone-100 font-mono">
@@ -1209,7 +1204,7 @@ export default function ProductHistoryPage() {
                         type="button"
                         onClick={handleSavePrices}
                         disabled={savingPrices}
-                        className="px-3 py-1.5 rounded-md bg-amber-600 text-white text-[11px] hover:bg-amber-700 disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-md bg-red-600 text-white text-[11px] hover:bg-red-700 disabled:opacity-50"
                       >
                         {savingPrices ? 'Saving…' : 'Save prices'}
                       </button>
@@ -1241,7 +1236,7 @@ export default function ProductHistoryPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-[11px] sm:text-sm divide-y divide-stone-200 dark:divide-stone-700">
-                  <thead className="bg-[#f9f9f8] dark:bg-stone-900">
+                  <thead className="bg-white dark:bg-stone-900">
                     <tr>
                       <th className="px-2 sm:px-3 py-2 text-left font-medium text-stone-500 dark:text-stone-400">PO</th>
                       <th className="px-2 sm:px-3 py-2 text-left font-medium text-stone-500 dark:text-stone-400 hidden sm:table-cell">Line</th>
@@ -1291,7 +1286,7 @@ export default function ProductHistoryPage() {
                       const receivingThisRow = receivingTransitId === row.transit.id;
 
                       return (
-                        <tr key={row.transit.id} className="hover:bg-[#f9f9f8] dark:hover:bg-stone-700/50">
+                        <tr key={row.transit.id} className="hover:bg-white dark:hover:bg-stone-700/50">
                           <td className="px-2 sm:px-3 py-2 align-top">
                             <div className="flex flex-col gap-0.5">
                               <span className="text-stone-900 dark:text-stone-100 font-medium text-[11px] sm:text-xs">
@@ -1331,7 +1326,7 @@ export default function ProductHistoryPage() {
                                     href={imageUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="group relative w-12 h-16 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 hover:border-amber-600 overflow-hidden transition-colors"
+                                    className="group relative w-12 h-16 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 hover:border-red-600 overflow-hidden transition-colors"
                                     title={`View invoice page ${idx + 1}`}
                                   >
                                     <img
@@ -1375,7 +1370,7 @@ export default function ProductHistoryPage() {
                                 }
                                 min="0"
                                 step="0.01"
-                                className="w-20 rounded-md border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-900 px-2 py-1 text-right text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                                className="w-20 rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-2 py-1 text-right text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-red-600"
                               />
                             ) : (
                               formatCurrency(defaultUnit)
@@ -1389,7 +1384,7 @@ export default function ProductHistoryPage() {
                               className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${row.transit.status === 'received'
                                 ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
                                 : row.transit.status === 'partially_received'
-                                  ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                                  ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
                                   : 'bg-stone-100 dark:bg-stone-700 text-stone-800 dark:text-stone-300'
                                 }`}
                             >

@@ -87,7 +87,7 @@ export default function MobileBarcodeScanner({ onScan, onClose }: MobileBarcodeS
             playsInline
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-8 border-2 border-amber-600 rounded-xl pointer-events-none" />
+          <div className="absolute inset-8 border-2 border-red-600 rounded-xl pointer-events-none" />
         </div>
 
         {initializing && !error && (

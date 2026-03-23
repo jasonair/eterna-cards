@@ -12,8 +12,8 @@ export default function POs() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+    <div className="min-h-screen bg-white dark:bg-stone-900 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
     </div>
   );
 }

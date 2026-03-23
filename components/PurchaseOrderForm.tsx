@@ -202,7 +202,7 @@ export default function PurchaseOrderForm({
       )}
 
       {description && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-600 rounded-lg p-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-600 rounded-lg p-4">
           <p className="text-sm text-stone-600 dark:text-stone-400">{description}</p>
         </div>
       )}
@@ -214,12 +214,12 @@ export default function PurchaseOrderForm({
         {/* Supplier Dropdown */}
         <div className="mb-4">
           <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-            Supplier <span className="text-amber-600">*</span>
+            Supplier <span className="text-red-600">*</span>
           </label>
           <select
             value={selectedSupplierId}
             onChange={(e) => handleSupplierChange(e.target.value)}
-            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600 mb-2 appearance-none"
+            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-red-600 mb-2 appearance-none"
           >
             <option value="">-- Select existing supplier or create new --</option>
             {suppliers.map((supplier) => (
@@ -235,7 +235,7 @@ export default function PurchaseOrderForm({
               value={formData.supplier.name || ''}
               onChange={(e) => handleSupplierFieldChange('name', e.target.value)}
               placeholder="Or enter new supplier name"
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           )}
         </div>
@@ -248,7 +248,7 @@ export default function PurchaseOrderForm({
               value={formData.supplier.email || ''}
               onChange={(e) => handleSupplierFieldChange('email', e.target.value)}
               placeholder="supplier@example.com"
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
           <div>
@@ -258,7 +258,7 @@ export default function PurchaseOrderForm({
               value={formData.supplier.phone || ''}
               onChange={(e) => handleSupplierFieldChange('phone', e.target.value)}
               placeholder="+44 20 1234 5678"
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
           <div>
@@ -268,7 +268,7 @@ export default function PurchaseOrderForm({
               value={formData.supplier.vatNumber || ''}
               onChange={(e) => handleSupplierFieldChange('vatNumber', e.target.value)}
               placeholder="GB123456789"
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
           <div className="md:col-span-2">
@@ -278,7 +278,7 @@ export default function PurchaseOrderForm({
               onChange={(e) => handleSupplierFieldChange('address', e.target.value)}
               placeholder="Full address"
               rows={2}
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function PurchaseOrderForm({
               value={formData.purchaseOrder.invoiceNumber || ''}
               onChange={(e) => handlePOFieldChange('invoiceNumber', e.target.value)}
               placeholder="INV-001"
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
           <div>
@@ -304,7 +304,7 @@ export default function PurchaseOrderForm({
               type="date"
               value={formData.purchaseOrder.invoiceDate || ''}
               onChange={(e) => handlePOFieldChange('invoiceDate', e.target.value)}
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600 dark:[color-scheme:dark]"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-red-600 dark:[color-scheme:dark]"
             />
           </div>
           <div>
@@ -314,7 +314,7 @@ export default function PurchaseOrderForm({
               value={formData.purchaseOrder.paymentTerms || ''}
               onChange={(e) => handlePOFieldChange('paymentTerms', e.target.value)}
               placeholder="Net 30"
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
           <div>
@@ -322,7 +322,7 @@ export default function PurchaseOrderForm({
             <select
               value={formData.purchaseOrder.courier || ''}
               onChange={(e) => handlePOFieldChange('courier', e.target.value)}
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600 appearance-none"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-red-600 appearance-none"
             >
               <option value="">-- Select Courier --</option>
               <option value="DPD">DPD</option>
@@ -353,7 +353,7 @@ export default function PurchaseOrderForm({
                 }));
               }}
               placeholder="e.g. 1Z999..."
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-600"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>
           <div>
@@ -361,7 +361,7 @@ export default function PurchaseOrderForm({
             <select
               value={formData.purchaseOrder.trackingStatus || 'pending'}
               onChange={(e) => handlePOFieldChange('trackingStatus', e.target.value)}
-              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-[#f9f9f8] dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-600 appearance-none"
+              className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded-md text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-red-600 appearance-none"
             >
               <option value="pending">Pending</option>
               <option value="in_transit">In Transit</option>
@@ -379,15 +379,15 @@ export default function PurchaseOrderForm({
           <button
             type="button"
             onClick={handleAddLineItem}
-            className="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+            className="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
           >
             + Add Line Item
           </button>
         </div>
 
-        <div className="bg-[#f9f9f8] dark:bg-stone-800/50 rounded-lg p-3 max-h-96 overflow-y-auto border border-stone-200 dark:border-stone-700">
+        <div className="bg-white dark:bg-stone-800/50 rounded-lg p-3 max-h-96 overflow-y-auto border border-stone-200 dark:border-stone-700">
           <table className="w-full text-sm">
-            <thead className="text-xs text-stone-600 dark:text-stone-400 font-medium border-b border-stone-200 dark:border-stone-700 sticky top-0 bg-[#f9f9f8] dark:bg-stone-800">
+            <thead className="text-xs text-stone-600 dark:text-stone-400 font-medium border-b border-stone-200 dark:border-stone-700 sticky top-0 bg-white dark:bg-stone-800">
               <tr>
                 <th className="text-left pb-2">Description</th>
                 <th className="text-left pb-2">SKU</th>
@@ -406,7 +406,7 @@ export default function PurchaseOrderForm({
                       value={line.description}
                       onChange={(e) => handleLineItemChange(lineIdx, 'description', e.target.value)}
                       placeholder="Item description"
-                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-red-600"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -415,7 +415,7 @@ export default function PurchaseOrderForm({
                       value={line.supplierSku || ''}
                       onChange={(e) => handleLineItemChange(lineIdx, 'supplierSku', e.target.value)}
                       placeholder="SKU"
-                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-red-600"
                     />
                   </td>
                   <td className="py-2 pr-2">
@@ -423,7 +423,7 @@ export default function PurchaseOrderForm({
                       type="number"
                       value={line.quantity}
                       onChange={(e) => handleLineItemChange(lineIdx, 'quantity', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 text-right focus:outline-none focus:ring-1 focus:ring-red-600"
                       min="0"
                       step="1"
                     />
@@ -433,7 +433,7 @@ export default function PurchaseOrderForm({
                       type="number"
                       value={line.unitCostExVAT}
                       onChange={(e) => handleLineItemChange(lineIdx, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 text-right focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 rounded text-sm text-stone-900 dark:text-stone-100 text-right focus:outline-none focus:ring-1 focus:ring-red-600"
                       min="0"
                       step="0.01"
                     />
@@ -444,7 +444,7 @@ export default function PurchaseOrderForm({
                       type="button"
                       onClick={() => handleRemoveLineItem(lineIdx)}
                       disabled={formData.poLines.length === 1}
-                      className="text-amber-600 hover:text-amber-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="text-red-600 hover:text-red-700 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Remove line"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -461,7 +461,7 @@ export default function PurchaseOrderForm({
         <div className="mt-3 flex justify-end">
           <div className="text-base">
             <span className="text-stone-600 dark:text-stone-400 font-medium">Total: </span>
-            <span className="font-bold text-amber-600">GBP {formData.totals?.total?.toFixed(2) || '0.00'}</span>
+            <span className="font-bold text-red-600">GBP {formData.totals?.total?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
       </div>
@@ -472,7 +472,7 @@ export default function PurchaseOrderForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+            className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
             disabled={loading}
           >
             Cancel
@@ -481,7 +481,7 @@ export default function PurchaseOrderForm({
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Saving...' : submitButtonText}
         </button>

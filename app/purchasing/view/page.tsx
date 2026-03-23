@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedFetch } from '@/lib/api-client';
 
 interface Supplier {
@@ -90,8 +88,6 @@ export default function ViewDataPage() {
   });
   const [editingLines, setEditingLines] = useState<POLine[]>([]);
   const [saving, setSaving] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [receivingLineId, setReceivingLineId] = useState<string | null>(null);
   const [receivingPOId, setReceivingPOId] = useState<string | null>(null);
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, string>>({});
@@ -240,7 +236,8 @@ export default function ViewDataPage() {
     });
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
+  const formatCurrency = (amount: number, currency?: string) => {
+    void currency;
     return `£${amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GBP`;
   };
 
@@ -291,88 +288,6 @@ export default function ViewDataPage() {
         acc[key] = grouped[key];
         return acc;
       }, {} as { [key: string]: PurchaseOrder[] });
-  };
-
-  const handleExportClick = () => {
-    setShowExportModal(true);
-    // Pre-select all months
-    const allMonths = Object.keys(groupPOsByMonth());
-    setSelectedMonths(allMonths);
-  };
-
-  const handleMonthToggle = (month: string) => {
-    setSelectedMonths(prev =>
-      prev.includes(month)
-        ? prev.filter(m => m !== month)
-        : [...prev, month]
-    );
-  };
-
-  const handleSelectAllMonths = () => {
-    const allMonths = Object.keys(groupPOsByMonth());
-    setSelectedMonths(allMonths);
-  };
-
-  const handleDeselectAllMonths = () => {
-    setSelectedMonths([]);
-  };
-
-  const exportToCSV = (monthsToExport?: string[]) => {
-    const groupedPOs = groupPOsByMonth();
-    const monthsToInclude = monthsToExport || Object.keys(groupedPOs);
-
-    const escapeCSV = (val: string) => {
-      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-        return `"${val.replace(/"/g, '""')}"`;
-      }
-      return val;
-    };
-
-    const headers = ['Month', 'Invoice #', 'Supplier', 'Date', 'Currency', 'Description', 'SKU', 'Qty', 'Unit Cost (ex VAT)', 'RRP', 'Line Total (ex VAT)'];
-    const rows: string[][] = [];
-
-    Object.entries(groupedPOs)
-      .filter(([month]) => monthsToInclude.includes(month))
-      .forEach(([month, pos]) => {
-        for (const po of pos) {
-          const lines = getPOLines(po.id);
-          if (lines.length === 0) {
-            rows.push([
-              month,
-              po.invoiceNumber || 'N/A',
-              getSupplierName(po.supplierId),
-              formatDate(po.invoiceDate),
-              po.currency,
-              '', '', '', '', '', '',
-            ]);
-          } else {
-            for (const line of lines) {
-              rows.push([
-                month,
-                po.invoiceNumber || 'N/A',
-                getSupplierName(po.supplierId),
-                formatDate(po.invoiceDate),
-                po.currency,
-                line.description || '',
-                line.supplierSku || '',
-                String(line.quantity),
-                line.unitCostExVAT.toFixed(2),
-                line.rrp != null ? line.rrp.toFixed(2) : '',
-                line.lineTotalExVAT.toFixed(2),
-              ]);
-            }
-          }
-        }
-      });
-
-    const csvContent = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `purchase-orders-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleDelete = async (poId: string) => {
@@ -529,7 +444,7 @@ export default function ViewDataPage() {
     setEditingLines(prev => prev.filter(line => line.id !== lineId));
   };
 
-  const handleUpdateLineItem = (lineId: string, field: keyof POLine, value: any) => {
+  const handleUpdateLineItem = (lineId: string, field: keyof POLine, value: string | number | null) => {
     setEditingLines(prev => prev.map(line => {
       if (line.id === lineId) {
         const updatedLine = { ...line, [field]: value };
@@ -705,7 +620,7 @@ export default function ViewDataPage() {
 
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-[#f9f9f8] dark:bg-stone-900 py-12 px-4">
+      <div className="min-h-screen bg-white dark:bg-stone-900 py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-600">Error: {error}</p>
@@ -718,9 +633,9 @@ export default function ViewDataPage() {
   const isEmpty = !loading && (!data || (data.suppliers.length === 0 && data.purchaseOrders.length === 0));
 
   return (
-    <div className="h-full flex flex-col bg-[#f9f9f8] dark:bg-stone-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-stone-900 overflow-hidden">
       {/* Sticky top section */}
-      <div className="flex-none px-3 sm:px-4 lg:px-6 pt-3 sm:pt-6 pb-3 space-y-3 sm:space-y-4 border-b border-stone-200 dark:border-stone-800 bg-[#f9f9f8] dark:bg-stone-900">
+      <div className="flex-none px-3 sm:px-4 lg:px-6 pt-3 sm:pt-6 pb-3 space-y-3 sm:space-y-4 border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
         {/* Navigation Header */}
         <div className="flex flex-row items-center justify-between gap-2">
           <div>
@@ -732,21 +647,17 @@ export default function ViewDataPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportClick}
-              disabled={!data || data.purchaseOrders.length === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-stone-200 dark:border-stone-700 text-sm font-medium rounded-md text-stone-700 dark:text-stone-300 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            <Link
+              href="/purchasing/import"
+              className="inline-flex items-center px-3 py-2 rounded-md text-sm font-semibold text-white bg-red-600 hover:bg-red-700"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export CSV
-            </button>
+              Import PO
+            </Link>
             <button
               onClick={fetchData}
               disabled={loading}
               title="Refresh"
-              className="inline-flex items-center justify-center w-9 h-9 border border-transparent rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center w-9 h-9 border border-transparent rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -758,7 +669,7 @@ export default function ViewDataPage() {
         {/* Stats Cards - collapsible on mobile when scrolled */}
         <div className={`transition-all duration-300 ease-in-out sm:block ${headerScrolled ? 'max-h-0 overflow-hidden opacity-0 sm:max-h-none sm:overflow-visible sm:opacity-100 -mt-3 sm:mt-0' : 'max-h-56 overflow-visible opacity-100'}`}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 px-0.5 pb-0.5">
-            <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
+            <div className="flex flex-col justify-between py-1 text-left">
               <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Total Value</p>
               {loading ? (
                 <div className="h-6 sm:h-7 w-28 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
@@ -767,7 +678,7 @@ export default function ViewDataPage() {
               )}
             </div>
 
-            <div className="flex flex-col justify-between bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 p-3 sm:p-4 text-left shadow-sm">
+            <div className="flex flex-col justify-between py-1 text-left">
               <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Orders</p>
               {loading ? (
                 <div className="h-6 sm:h-7 w-12 bg-stone-100 dark:bg-stone-700 rounded animate-pulse mt-1" />
@@ -779,9 +690,9 @@ export default function ViewDataPage() {
             <button
               type="button"
               onClick={() => setStatusFilter('in_transit')}
-              className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${statusFilter === 'in_transit'
-                ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
-                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
+              className={`flex flex-col justify-between py-1 text-left border-b-2 transition-colors ${statusFilter === 'in_transit'
+                ? 'border-red-600 text-red-600 dark:text-red-400'
+                : 'border-transparent text-stone-900 dark:text-stone-100 hover:text-red-600 dark:hover:text-red-400'
                 }`}
             >
               <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">In Transit</p>
@@ -797,9 +708,9 @@ export default function ViewDataPage() {
             <button
               type="button"
               onClick={() => setStatusFilter('received')}
-              className={`flex flex-col justify-between rounded-xl border p-3 sm:p-4 text-left transition-all shadow-sm ${statusFilter === 'received'
-                ? 'border-amber-600 bg-amber-50 dark:bg-amber-900/20 scale-[1.02]'
-                : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-amber-600'
+              className={`flex flex-col justify-between py-1 text-left border-b-2 transition-colors ${statusFilter === 'received'
+                ? 'border-red-600 text-red-600 dark:text-red-400'
+                : 'border-transparent text-stone-900 dark:text-stone-100 hover:text-red-600 dark:hover:text-red-400'
                 }`}
             >
               <p className="text-[10px] sm:text-xs font-medium tracking-wide text-stone-600 dark:text-stone-400 uppercase">Received</p>
@@ -823,21 +734,21 @@ export default function ViewDataPage() {
 
         {/* Empty State */}
         {isEmpty && (
-          <div className="bg-white dark:bg-stone-800 rounded-lg shadow p-12 text-center border border-stone-200 dark:border-stone-700">
+          <div className="py-16 text-center border-t border-stone-200 dark:border-stone-700">
             <svg className="mx-auto h-12 w-12 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h3 className="mt-2 text-lg font-medium text-stone-900 dark:text-stone-100">No data yet</h3>
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-              Upload your first PDF invoice to see data here.
+              Purchase orders will appear here once processed through the new workflow.
             </p>
-            <div className="mt-6">
-              <a
+            <div className="mt-5">
+              <Link
                 href="/purchasing/import"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-semibold text-white bg-red-600 hover:bg-red-700"
               >
-                Upload Invoice
-              </a>
+                Import your first PO
+              </Link>
             </div>
           </div>
         )}
@@ -845,7 +756,7 @@ export default function ViewDataPage() {
         {/* Purchase Orders List - Grouped by Month */}
         {!isEmpty && (loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
           </div>
         ) : (
           <div className="space-y-8">
@@ -857,7 +768,7 @@ export default function ViewDataPage() {
                   {/* Month Header */}
                   <div className="flex items-center gap-3">
                     <h2 className="text-2xl font-bold text-stone-900 dark:text-stone-100">{month}</h2>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-stone-100 dark:bg-stone-800 text-amber-600">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-stone-100 dark:bg-stone-800 text-red-600">
                       {filteredPOs.length} PO{filteredPOs.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -876,7 +787,7 @@ export default function ViewDataPage() {
                       return (
                         <div
                           key={po.id}
-                          className="bg-white dark:bg-stone-800 rounded-lg shadow overflow-hidden transition-all border border-stone-200 dark:border-stone-700"
+                          className="bg-white dark:bg-stone-900 overflow-hidden transition-all border-t border-stone-200 dark:border-stone-700"
                         >
                           {/* PO Header */}
                           <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-stone-200 dark:border-stone-700">
@@ -899,7 +810,7 @@ export default function ViewDataPage() {
                                 <div className="flex gap-1 sm:gap-2">
                                   <button
                                     onClick={() => handleShowNotes(po)}
-                                    className="border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-2 rounded-lg transition-colors"
+                                    className="text-stone-500 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-md transition-colors"
                                     title={po.notes && po.notes.trim() ? 'View Notes' : 'Add Note'}
                                   >
                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -908,7 +819,7 @@ export default function ViewDataPage() {
                                   </button>
                                   <button
                                     onClick={() => handleEdit(po)}
-                                    className="border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-2 rounded-lg transition-colors"
+                                    className="text-stone-500 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-md transition-colors"
                                     title="Edit Purchase Order"
                                   >
                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -918,7 +829,7 @@ export default function ViewDataPage() {
                                   <button
                                     onClick={() => handleDelete(po.id)}
                                     disabled={deleting === po.id}
-                                    className="border border-stone-200 dark:border-stone-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-stone-400 dark:text-stone-500 hover:text-red-500 hover:border-red-200 p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="text-stone-400 dark:text-stone-500 hover:text-red-500 p-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     title="Delete Purchase Order"
                                   >
                                     {deleting === po.id ? (
@@ -938,7 +849,7 @@ export default function ViewDataPage() {
                           </div>
 
                           {/* PO Details */}
-                          <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#f9f9f8] dark:bg-stone-900 border-b border-stone-200 dark:border-stone-700">
+                          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-stone-200 dark:border-stone-700">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                               <div>
                                 <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide">Invoice Date</p>
@@ -976,7 +887,7 @@ export default function ViewDataPage() {
                                 {po.trackingNumber && (
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-wide">Tracking</span>
-                                    <span className="font-mono text-sm text-amber-600 font-medium">
+                                    <span className="font-mono text-sm text-red-600 font-medium">
                                       {po.trackingNumber}
                                     </span>
                                     {getTrackingUrl(po.courier, po.trackingNumber, po.trackingPostcode) && (
@@ -984,7 +895,7 @@ export default function ViewDataPage() {
                                         href={getTrackingUrl(po.courier, po.trackingNumber, po.trackingPostcode)!}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 font-semibold underline underline-offset-4"
+                                        className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold underline underline-offset-4"
                                       >
                                         Track Item
                                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -999,7 +910,7 @@ export default function ViewDataPage() {
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${po.trackingStatus === 'delivered'
                                       ? 'bg-green-50 text-green-700 border-green-200'
                                       : po.trackingStatus === 'in_transit'
-                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                        ? 'bg-red-50 text-red-700 border-red-200'
                                         : 'bg-stone-50 text-stone-600 border-stone-200'
                                       }`}>
                                       {po.trackingStatus.replace('_', ' ')}
@@ -1012,12 +923,12 @@ export default function ViewDataPage() {
 
                           {/* Invoice Images - Expandable */}
                           {po.imageUrls && po.imageUrls.length > 0 && (
-                            <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#f9f9f8] dark:bg-stone-900 border-b border-stone-200 dark:border-stone-700">
+                            <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-stone-200 dark:border-stone-700">
                               <button
                                 onClick={() => setExpandedImages(prev => ({ ...prev, [po.id]: !prev[po.id] }))}
                                 className="flex items-center justify-between w-full text-left group"
                               >
-                                <h4 className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-amber-600 transition-colors">
+                                <h4 className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-stone-100 group-hover:text-red-600 transition-colors">
                                   Original Invoice Images ({po.imageUrls.length})
                                 </h4>
                                 <svg
@@ -1038,7 +949,7 @@ export default function ViewDataPage() {
                                       href={imageUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="group relative aspect-[3/4] bg-white rounded-lg overflow-hidden border-2 border-stone-200 hover:border-amber-600 transition-colors"
+                                      className="group relative aspect-[3/4] bg-white rounded-md overflow-hidden border border-stone-200 hover:border-red-600 transition-colors"
                                     >
                                       <img
                                         src={imageUrl}
@@ -1050,7 +961,7 @@ export default function ViewDataPage() {
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                                         </svg>
                                       </div>
-                                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
                                         <p className="text-xs text-white font-medium">Page {idx + 1}</p>
                                       </div>
                                     </a>
@@ -1104,10 +1015,10 @@ export default function ViewDataPage() {
                                     return (
                                       <tr
                                         key={line.id}
-                                        className={`hover:border-l-2 hover:border-l-amber-600/60 dark:hover:bg-stone-700/20 ${isReceived
+                                        className={`hover:border-l-2 hover:border-l-red-600/60 dark:hover:bg-stone-700/20 ${isReceived
                                           ? 'bg-green-50 dark:bg-green-900/20'
                                           : isPartial
-                                            ? 'bg-amber-50 dark:bg-amber-900/20'
+                                            ? 'bg-red-50 dark:bg-red-900/20'
                                             : ''
                                           }`}
                                       >
@@ -1120,7 +1031,7 @@ export default function ViewDataPage() {
                                           {linkedProductId ? (
                                             <Link
                                               href={`/inventory/${linkedProductId}`}
-                                              className="break-words underline decoration-stone-300 underline-offset-2 hover:text-amber-700 hover:decoration-amber-600"
+                                              className="break-words underline decoration-stone-300 underline-offset-2 hover:text-red-700 hover:decoration-red-600"
                                               title="Open inventory product"
                                             >
                                               {line.description}
@@ -1140,13 +1051,13 @@ export default function ViewDataPage() {
                                             </span>
                                           )}
                                           {lineStatus.status === 'partial' && (
-                                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-red-50 text-red-700 border border-red-200 whitespace-nowrap">
                                               <span className="hidden sm:inline">Partial ({lineStatus.receivedQuantity}/{line.quantity})</span>
                                               <span className="sm:hidden">{lineStatus.receivedQuantity}/{line.quantity}</span>
                                             </span>
                                           )}
                                           {lineStatus.status === 'not_received' && (
-                                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#f9f9f8] dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 whitespace-nowrap">
+                                            <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700 whitespace-nowrap">
                                               <span className="hidden sm:inline">Not received</span>
                                               <span className="sm:hidden">—</span>
                                             </span>
@@ -1169,7 +1080,7 @@ export default function ViewDataPage() {
                                                     [line.id]: e.target.value,
                                                   }))
                                                 }
-                                                className="w-16 rounded-md bg-[#f9f9f8] dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                                                className="w-16 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-600"
                                               />
                                               <button
                                                 type="button"
@@ -1208,7 +1119,7 @@ export default function ViewDataPage() {
 
                           {/* Totals Breakdown */}
                           {(po.subtotalExVAT != null || extras > 0 || vat > 0) && (
-                            <div className="px-3 sm:px-6 py-3 sm:py-4 bg-[#f9f9f8] dark:bg-stone-900 border-t border-stone-200 dark:border-stone-700">
+                            <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-stone-200 dark:border-stone-700">
                               <div className="flex justify-end">
                                 <div className="w-full sm:w-72 space-y-1.5 text-xs sm:text-sm">
                                   <div className="flex justify-between text-stone-500 dark:text-stone-400">
@@ -1237,14 +1148,14 @@ export default function ViewDataPage() {
                           )}
 
                           {/* Footer with metadata */}
-                          <div className="px-3 sm:px-6 py-2 sm:py-3 bg-[#f9f9f8] dark:bg-stone-900 border-t border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="px-3 sm:px-6 py-2 sm:py-3 border-t border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <p className="text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 truncate">
                               Imported: {formatDate(po.createdAt)}
                             </p>
                             <button
                               onClick={() => handleReceiveFullPO(po)}
                               disabled={receivingPOId === po.id || receiveSummary.totalRemaining <= 0}
-                              className="inline-flex items-center justify-center px-3 py-1.5 text-[11px] sm:text-sm rounded-lg border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700 hover:text-stone-800 dark:hover:text-stone-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                              className="inline-flex items-center justify-center px-3 py-1.5 text-[11px] sm:text-sm rounded-md text-stone-600 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                               title="Mark all remaining quantities on this PO as received"
                             >
                               {receivingPOId === po.id ? 'Receiving...' : 'Mark all received'}
@@ -1276,7 +1187,7 @@ export default function ViewDataPage() {
                     setEditingPO(null);
                     setEditingLines([]);
                   }}
-                  className="text-stone-500 hover:text-amber-600"
+                  className="text-stone-500 hover:text-red-600"
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1289,7 +1200,7 @@ export default function ViewDataPage() {
               {/* PO Header and Images Side-by-Side */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
                 {/* Left: PO Details */}
-                <div className="bg-[#f9f9f8] dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700">
+                <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700">
                   <h4 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100 mb-4">Purchase Order Details</h4>
                   <div className="space-y-4">
                     <div>
@@ -1300,7 +1211,7 @@ export default function ViewDataPage() {
                         type="text"
                         value={editFormData.invoiceNumber}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                         placeholder="Enter invoice number"
                       />
                     </div>
@@ -1313,7 +1224,7 @@ export default function ViewDataPage() {
                         type="date"
                         value={editFormData.invoiceDate}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                       />
                     </div>
 
@@ -1324,7 +1235,7 @@ export default function ViewDataPage() {
                       <select
                         value={editFormData.currency}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, currency: e.target.value }))}
-                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                       >
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -1342,7 +1253,7 @@ export default function ViewDataPage() {
                         type="text"
                         value={editFormData.paymentTerms}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
-                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                         placeholder="e.g., Net 30, Due on Receipt"
                       />
                     </div>
@@ -1362,7 +1273,7 @@ export default function ViewDataPage() {
                               trackingStatus: (val && prev.trackingNumber && prev.trackingStatus === 'pending') ? 'in_transit' : prev.trackingStatus
                             }));
                           }}
-                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                         >
                           <option value="">-- None --</option>
                           <option value="DPD">DPD</option>
@@ -1391,7 +1302,7 @@ export default function ViewDataPage() {
                               trackingStatus: (val && prev.trackingStatus === 'pending') ? 'in_transit' : prev.trackingStatus
                             }));
                           }}
-                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                           placeholder="Tracking #"
                         />
                       </div>
@@ -1404,7 +1315,7 @@ export default function ViewDataPage() {
                             type="text"
                             value={editFormData.trackingPostcode}
                             onChange={(e) => setEditFormData(prev => ({ ...prev, trackingPostcode: e.target.value }))}
-                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                            className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                             placeholder="e.g. SW1A 1AA"
                           />
                         </div>
@@ -1416,7 +1327,7 @@ export default function ViewDataPage() {
                         <select
                           value={editFormData.trackingStatus}
                           onChange={(e) => setEditFormData(prev => ({ ...prev, trackingStatus: e.target.value }))}
-                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800"
+                          className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800"
                         >
                           <option value="pending">Pending</option>
                           <option value="in_transit">In Transit</option>
@@ -1434,7 +1345,7 @@ export default function ViewDataPage() {
                         value={editFormData.notes}
                         onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
                         rows={4}
-                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-[#f9f9f8] dark:bg-stone-800 resize-y"
+                        className="w-full px-3 py-2 border border-stone-200 dark:border-stone-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-800 resize-y"
                         placeholder="Add internal notes for this purchase order"
                       />
                     </div>
@@ -1443,7 +1354,7 @@ export default function ViewDataPage() {
 
                 {/* Right: Invoice Images */}
                 {editingPO.imageUrls && editingPO.imageUrls.length > 0 ? (
-                  <div className="bg-[#f9f9f8] dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700">
+                  <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700">
                     <h4 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100 mb-4">Original Invoice Images</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {editingPO.imageUrls.map((imageUrl, idx) => (
@@ -1452,7 +1363,7 @@ export default function ViewDataPage() {
                           href={imageUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group relative aspect-[3/4] bg-white rounded-lg overflow-hidden border-2 border-stone-200 hover:border-amber-600 transition-colors"
+                          className="group relative aspect-[3/4] bg-white rounded-lg overflow-hidden border-2 border-stone-200 hover:border-red-600 transition-colors"
                         >
                           <img
                             src={imageUrl}
@@ -1464,7 +1375,7 @@ export default function ViewDataPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                           </div>
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
                             <p className="text-xs text-white font-medium">Page {idx + 1}</p>
                           </div>
                         </a>
@@ -1472,14 +1383,14 @@ export default function ViewDataPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#f9f9f8] dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center">
+                  <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center">
                     <p className="text-sm text-stone-500 dark:text-stone-400">No invoice images available</p>
                   </div>
                 )}
               </div>
 
               {/* Line Items Section */}
-              <div className="bg-[#f9f9f8] dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl p-4 sm:p-5">
+              <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                   <div>
                     <h4 className="text-base sm:text-lg font-semibold text-stone-900 dark:text-stone-100">Line Items</h4>
@@ -1487,7 +1398,7 @@ export default function ViewDataPage() {
                   </div>
                   <button
                     onClick={handleAddLineItem}
-                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
                   >
                     <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1507,7 +1418,7 @@ export default function ViewDataPage() {
                           type="text"
                           value={line.description}
                           onChange={(e) => handleUpdateLineItem(line.id, 'description', e.target.value)}
-                          className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                          className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                           placeholder="Item description"
                         />
                       </div>
@@ -1520,7 +1431,7 @@ export default function ViewDataPage() {
                             type="text"
                             value={line.supplierSku || ''}
                             onChange={(e) => handleUpdateLineItem(line.id, 'supplierSku', e.target.value || null)}
-                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                             placeholder="SKU"
                           />
                         </div>
@@ -1532,7 +1443,7 @@ export default function ViewDataPage() {
                             type="number"
                             value={line.quantity}
                             onChange={(e) => handleUpdateLineItem(line.id, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                             min="0"
                             step="1"
                           />
@@ -1547,7 +1458,7 @@ export default function ViewDataPage() {
                             type="number"
                             value={line.unitCostExVAT}
                             onChange={(e) => handleUpdateLineItem(line.id, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                             min="0"
                             step="0.01"
                           />
@@ -1560,7 +1471,7 @@ export default function ViewDataPage() {
                             type="number"
                             value={line.rrp || ''}
                             onChange={(e) => handleUpdateLineItem(line.id, 'rrp', parseFloat(e.target.value) || null)}
-                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                            className="w-full px-2 py-2 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                             min="0"
                             step="0.01"
                             placeholder="Optional"
@@ -1577,7 +1488,7 @@ export default function ViewDataPage() {
                       </div>
                       <button
                         onClick={() => handleRemoveLineItem(line.id)}
-                        className="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-amber-600 border border-stone-200 dark:border-stone-700 rounded-md hover:bg-stone-50 dark:hover:bg-stone-700"
+                        className="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-red-600 border border-stone-200 dark:border-stone-700 rounded-md hover:bg-stone-50 dark:hover:bg-stone-700"
                       >
                         Remove Line Item
                       </button>
@@ -1587,7 +1498,7 @@ export default function ViewDataPage() {
 
                 <div className="hidden sm:block overflow-x-auto">
                   <table className="min-w-full divide-y divide-stone-200 dark:divide-stone-700">
-                    <thead className="bg-[#f9f9f8] dark:bg-stone-900">
+                    <thead className="bg-white dark:bg-stone-900">
                       <tr>
                         <th className="px-3 py-3 text-left text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                           Description
@@ -1620,7 +1531,7 @@ export default function ViewDataPage() {
                               type="text"
                               value={line.description}
                               onChange={(e) => handleUpdateLineItem(line.id, 'description', e.target.value)}
-                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                               placeholder="Item description"
                             />
                           </td>
@@ -1629,7 +1540,7 @@ export default function ViewDataPage() {
                               type="text"
                               value={line.supplierSku || ''}
                               onChange={(e) => handleUpdateLineItem(line.id, 'supplierSku', e.target.value || null)}
-                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                               placeholder="SKU"
                             />
                           </td>
@@ -1638,7 +1549,7 @@ export default function ViewDataPage() {
                               type="number"
                               value={line.quantity}
                               onChange={(e) => handleUpdateLineItem(line.id, 'quantity', parseFloat(e.target.value) || 0)}
-                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                               min="0"
                               step="1"
                             />
@@ -1648,7 +1559,7 @@ export default function ViewDataPage() {
                               type="number"
                               value={line.unitCostExVAT}
                               onChange={(e) => handleUpdateLineItem(line.id, 'unitCostExVAT', parseFloat(e.target.value) || 0)}
-                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                               min="0"
                               step="0.01"
                             />
@@ -1658,7 +1569,7 @@ export default function ViewDataPage() {
                               type="number"
                               value={line.rrp || ''}
                               onChange={(e) => handleUpdateLineItem(line.id, 'rrp', parseFloat(e.target.value) || null)}
-                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
+                              className="w-full px-2 py-1 border border-stone-200 dark:border-stone-700 rounded text-sm focus:outline-none focus:ring-1 focus:ring-red-600 text-stone-900 dark:text-stone-100 bg-white dark:bg-stone-900"
                               min="0"
                               step="0.01"
                               placeholder="Optional"
@@ -1670,7 +1581,7 @@ export default function ViewDataPage() {
                           <td className="px-3 py-3">
                             <button
                               onClick={() => handleRemoveLineItem(line.id)}
-                              className="text-amber-600 hover:text-amber-700 text-sm font-medium"
+                              className="text-red-600 hover:text-red-700 text-sm font-medium"
                               title="Remove line item"
                             >
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1686,7 +1597,7 @@ export default function ViewDataPage() {
 
                 {editingLines.length === 0 && (
                   <div className="text-center py-8 text-stone-500">
-                    No line items. Click "Add Line Item" to get started.
+                    No line items. Click &quot;Add Line Item&quot; to get started.
                   </div>
                 )}
               </div>
@@ -1699,7 +1610,7 @@ export default function ViewDataPage() {
                     setEditingPO(null);
                     setEditingLines([]);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-stone-900 bg-stone-100 border border-stone-300 rounded-md hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+                  className="px-4 py-2 text-sm font-medium text-stone-900 bg-stone-100 border border-stone-300 rounded-md hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
                   disabled={saving}
                 >
                   Cancel
@@ -1707,7 +1618,7 @@ export default function ViewDataPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <span className="flex items-center">
@@ -1720,85 +1631,6 @@ export default function ViewDataPage() {
                   ) : (
                     'Save Changes'
                   )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export Month Selection Modal */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative mx-auto p-5 border border-stone-200 dark:border-stone-700 w-full max-w-md shadow-lg rounded-xl bg-white dark:bg-stone-800">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">Select Months to Export</h3>
-                <button
-                  onClick={() => setShowExportModal(false)}
-                  className="text-stone-500 hover:text-amber-600"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="mb-4 flex gap-2">
-                <button
-                  onClick={handleSelectAllMonths}
-                  className="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700"
-                >
-                  Select All
-                </button>
-                <button
-                  onClick={handleDeselectAllMonths}
-                  className="px-3 py-1 text-xs font-medium text-stone-900 dark:text-stone-100 bg-stone-100 dark:bg-stone-700 rounded hover:bg-stone-200 dark:hover:bg-stone-600"
-                >
-                  Deselect All
-                </button>
-              </div>
-
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {Object.entries(groupPOsByMonth()).map(([month, pos]) => (
-                  <label
-                    key={month}
-                    className="flex items-center p-3 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-700/50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedMonths.includes(month)}
-                      onChange={() => handleMonthToggle(month)}
-                      className="h-4 w-4 text-amber-600 focus:ring-amber-600 border-stone-200 dark:border-stone-700 rounded bg-white dark:bg-stone-900"
-                    />
-                    <div className="ml-3 flex-1">
-                      <span className="text-sm font-medium text-stone-900 dark:text-stone-100">{month}</span>
-                      <span className="ml-2 text-xs text-stone-500 dark:text-stone-400">
-                        ({pos.length} PO{pos.length !== 1 ? 's' : ''})
-                      </span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowExportModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-100 bg-stone-100 dark:bg-stone-700 border border-stone-300 dark:border-stone-600 rounded-md hover:bg-stone-200 dark:hover:bg-stone-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (selectedMonths.length > 0) {
-                      exportToCSV(selectedMonths);
-                      setShowExportModal(false);
-                    }
-                  }}
-                  disabled={selectedMonths.length === 0}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Export {selectedMonths.length > 0 && `(${selectedMonths.length} month${selectedMonths.length !== 1 ? 's' : ''})`}
                 </button>
               </div>
             </div>
@@ -1828,7 +1660,7 @@ export default function ViewDataPage() {
             </div>
 
             <div className="p-6">
-              <div className="bg-[#f9f9f8] dark:bg-stone-900 rounded-lg p-4 border border-stone-200 dark:border-stone-700">
+              <div className="bg-white dark:bg-stone-900 rounded-lg p-4 border border-stone-200 dark:border-stone-700">
                 <h4 className="text-sm font-semibold text-stone-600 dark:text-stone-400 mb-3">Notes & Instructions</h4>
                 <div className="text-sm text-stone-900 dark:text-stone-100 whitespace-pre-wrap leading-relaxed">
                   {selectedNotes.notes}
@@ -1839,7 +1671,7 @@ export default function ViewDataPage() {
             <div className="flex justify-end p-6 border-t border-stone-200 dark:border-stone-700">
               <button
                 onClick={handleCloseNotesModal}
-                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
               >
                 Close
               </button>

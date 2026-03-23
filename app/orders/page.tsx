@@ -19,7 +19,7 @@ interface InventoryEffect {
 
 interface Order {
   id: string;
-  shopify_order_id: string;
+  external_order_id: string;
   order_number: string;
   channel: string;
   status: string;
@@ -36,29 +36,15 @@ interface Order {
 }
 
 const ChannelIcon = ({ channel }: { channel: string }) => {
-  switch (channel) {
-    case 'shopify':
-      return (
-        <img src="/Shopify_icon.svg" alt="Shopify" className="w-5 h-5" />
-      );
-    case 'ebay':
-      return (
-        <img src="/EBay_logo.svg.png" alt="eBay" className="h-4 w-auto" />
-      );
-    case 'amazon':
-      return (
-        <img src="/Amazon_logo.svg.png" alt="Amazon" className="h-4 w-auto" />
-      );
-    default:
-      return (
-        <svg className="w-5 h-5 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      );
-  }
+  const label = (channel || 'online').toUpperCase().slice(0, 2);
+  return (
+    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold px-1">
+      {label}
+    </span>
+  );
 };
 
-const StatusBadge = ({ status, type }: { status: string | null; type: 'financial' | 'fulfillment' }) => {
+const StatusBadge = ({ status }: { status: string | null }) => {
   if (!status) return <span className="text-xs text-stone-400">—</span>;
 
   const colors: Record<string, string> = {
@@ -82,28 +68,12 @@ const StatusBadge = ({ status, type }: { status: string | null; type: 'financial
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [shopifyConnected, setShopifyConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
-    checkShopifyStatus();
     loadOrders();
   }, []);
-
-  const checkShopifyStatus = async () => {
-    try {
-      const res = await authenticatedFetch('/api/account');
-      const json = await res.json();
-      if (json.success) {
-        setShopifyConnected(json.data.settings.shopifyConnected);
-      }
-    } catch {
-      // Silently fail - non-critical
-    }
-  };
 
   const loadOrders = async () => {
     try {
@@ -119,26 +89,6 @@ export default function OrdersPage() {
       setError(err instanceof Error ? err.message : 'Failed to load orders');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSync = async () => {
-    try {
-      setSyncing(true);
-      setError(null);
-      setSyncMessage(null);
-      const res = await authenticatedFetch('/api/orders/sync', { method: 'POST' });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Failed to sync orders');
-      }
-      setSyncMessage(json.message);
-      // Reload orders after sync
-      await loadOrders();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sync orders');
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -163,7 +113,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#f9f9f8] dark:bg-stone-900">
+    <div className="h-full overflow-y-auto bg-white dark:bg-stone-900">
     <div className="py-4 sm:py-6 px-3 sm:px-4 lg:px-6 md:pl-0">
       <div className="w-full space-y-6">
         {/* Header */}
@@ -171,73 +121,19 @@ export default function OrdersPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100">Orders</h1>
             <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
-              Orders synced from sales channels
+              Recent orders across active channels
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:ml-auto">
-            {shopifyConnected && (
-              <button
-                onClick={handleSync}
-                disabled={syncing || loading}
-                className="inline-flex items-center px-4 py-2 border border-[#96bf48] text-sm font-medium rounded-md text-[#96bf48] bg-transparent hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#96bf48] transition-colors disabled:opacity-50"
-              >
-                <svg className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                {syncing ? 'Syncing...' : 'Sync Shopify'}
-              </button>
-            )}
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 transition-colors disabled:opacity-50"
             >
               <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
-          </div>
-        </div>
-
-        {/* Shopify Connection Banner */}
-        {shopifyConnected === false && (
-          <div className="bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                <ChannelIcon channel="shopify" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-stone-800 dark:text-stone-200">Connect your Shopify store</p>
-                <p className="text-xs text-stone-400 dark:text-stone-500">Link your Shopify account to sync orders automatically</p>
-              </div>
-            </div>
-            <a
-              href="/account"
-              className="shrink-0 px-4 py-2 text-sm font-medium rounded-lg bg-[#96bf48] text-white hover:bg-[#a8d14f] transition-colors"
-            >
-              Connect
-            </a>
-          </div>
-        )}
-
-        {/* Sync Message */}
-        {syncMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-600 flex items-center justify-between">
-            <span>{syncMessage}</span>
-            <button onClick={() => setSyncMessage(null)} className="text-green-600 hover:text-green-600 ml-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-
-        {/* Channel Legend */}
-        <div className="flex items-center gap-4 text-xs text-stone-500">
-          <span className="font-medium text-stone-600">Channels:</span>
-          <div className="flex items-center gap-1.5">
-            <ChannelIcon channel="shopify" />
-            <span>Shopify{shopifyConnected ? '' : ' (not connected)'}</span>
           </div>
         </div>
 
@@ -252,7 +148,7 @@ export default function OrdersPage() {
         <div className="bg-white dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden shadow-sm">
           {loading && orders.length === 0 ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
             </div>
           ) : orders.length === 0 ? (
             <div className="p-8 text-center text-stone-500 dark:text-stone-400">
@@ -260,28 +156,7 @@ export default function OrdersPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               <p className="text-sm">No orders yet</p>
-              {shopifyConnected ? (
-                <>
-                  <p className="text-xs text-stone-400 mt-1">Click &quot;Sync Shopify&quot; to pull your latest orders</p>
-                  <button
-                    onClick={handleSync}
-                    disabled={syncing}
-                    className="mt-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-[#96bf48] hover:bg-[#a8d14f] transition-colors disabled:opacity-50"
-                  >
-                    {syncing ? 'Syncing...' : 'Sync Now'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-stone-400 mt-1">Connect your Shopify store to start syncing orders</p>
-                  <a
-                    href="/account"
-                    className="mt-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-[#96bf48] hover:bg-[#a8d14f] transition-colors"
-                  >
-                    Connect Shopify
-                  </a>
-                </>
-              )}
+              <p className="text-xs text-stone-400 mt-1">Orders will appear here once incoming channels are active.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -339,10 +214,10 @@ export default function OrdersPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge status={order.financial_status} type="financial" />
+                          <StatusBadge status={order.financial_status} />
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge status={order.fulfillment_status} type="fulfillment" />
+                          <StatusBadge status={order.fulfillment_status} />
                         </td>
                         <td className="px-4 py-3">
                           {order.inventory_effects.length > 0 ? (

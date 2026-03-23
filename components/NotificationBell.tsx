@@ -93,7 +93,7 @@ export default function NotificationBell({
                     <div className="px-4 py-3 border-b border-stone-100 dark:border-stone-700 flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">Activity</h3>
                         {unreadCount > 0 && (
-                            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                            <span className="text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                                 {unreadCount} New
                             </span>
                         )}
@@ -101,7 +101,7 @@ export default function NotificationBell({
                     <div className="max-h-[400px] overflow-y-auto">
                         {loading ? (
                             <div className="p-8 text-center">
-                                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600 mb-2"></div>
+                                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mb-2"></div>
                                 <p className="text-xs text-stone-500">Loading activity...</p>
                             </div>
                         ) : notifications.length === 0 ? (
@@ -113,12 +113,12 @@ export default function NotificationBell({
                                 {notifications.map((notification) => (
                                     <div
                                         key={notification.id}
-                                        className={`px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700/50 ${!notification.is_read ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
+                                        className={`px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-700/50 ${!notification.is_read ? 'bg-red-50/30 dark:bg-red-900/10' : ''
                                             }`}
                                     >
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest">
+                                                <span className="text-[10px] font-bold text-red-600 dark:text-red-500 uppercase tracking-widest">
                                                     {notification.type}
                                                 </span>
                                                 <span className="text-[10px] text-stone-400 dark:text-stone-500 tabular-nums">
