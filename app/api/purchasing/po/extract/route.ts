@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5. Send to Gemini API v1 endpoint directly (bypass SDK)
+    // 5. Send to Gemini API (with fallback models to handle transient 503/404 errors)
     const extractionPrompt = getExtractionPrompt(exchangeRates);
     const prompt = extractionPrompt + `\n\nPlease analyze ${files.length === 1 ? 'this invoice document' : `these ${files.length} invoice documents (they are all part of the same order)`} and extract the data.`;
     
@@ -347,35 +347,65 @@ export async function POST(request: NextRequest) {
       }]
     };
 
-    let text;
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
+    const modelsToTry = [
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash'
+    ];
 
-      if (!response.ok) {
+    let text;
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`Attempting extraction with model: ${modelName}`);
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          text = data.candidates[0].content.parts[0].text;
+          console.log(`Successfully extracted with model: ${modelName}`);
+          break; // Success!
+        }
+
         const errorText = await response.text();
-        console.error('Gemini API error:', errorText);
+        lastError = { status: response.status, text: errorText, model: modelName };
+        console.warn(`Model ${modelName} failed with status ${response.status}`);
+        
+        // If it's a 400 (Bad Request), don't bother retrying with other models
+        if (response.status === 400) break;
+        
+      } catch (error) {
+        console.error(`Error with model ${modelName}:`, error);
+        lastError = { status: 500, text: error instanceof Error ? error.message : 'Unknown error', model: modelName };
+      }
+    }
+
+    if (!text) {
+      // All models failed
+      const status = lastError?.status || 500;
+      const details = lastError?.text || 'All AI models failed to respond.';
+      
+      if (status === 429) {
         return NextResponse.json(
-          { error: `Gemini API error: ${response.status} ${response.statusText}`, details: errorText },
-          { status: 500 }
+          { 
+            error: 'AI rate limit exceeded. Please wait a moment before trying again.',
+            details: 'All available AI models are currently receiving too many requests.'
+          },
+          { status: 429 }
         );
       }
 
-      const data = await response.json();
-      text = data.candidates[0].content.parts[0].text;
-    } catch (error) {
-      console.error('Gemini API error:', error);
       return NextResponse.json(
-        { error: `Failed to process files: ${error instanceof Error ? error.message : 'Unknown error'}` },
-        { status: 500 }
+        { error: `AI Error (Final Attempt: ${lastError?.model}): ${status}`, details },
+        { status: status >= 400 && status < 600 ? status : 500 }
       );
     }
 
